@@ -6,7 +6,7 @@ trick for a kind of information, an interaction): one row each, with the deck an
 row when you find a better way. Rows are short; the deck itself is the full example to copy from.
 
 Slide links point at the deck source; open the deck and press the slide number (or add `#n` to its URL).
-Decks: [showcase](demo/showcase/deck.html) · [PixelPine](demo/PixelPine-demo/deck.html) · [Nudgy](demo/Nudgy-demo/deck.html) (slide ids in the Czech decks) · PMIC talk (`presentation/deck.html` in the author's project, English; not yet in the repo).
+Decks: [showcase](demo/showcase/deck.html) · [PixelPine](demo/PixelPine-demo/deck.html) · [Nudgy](demo/Nudgy-demo/deck.html) · [Impedance](demo/Impedance-demo/deck.html) (slide ids in the Czech decks) · PMIC talk (`presentation/deck.html` in the author's project, English; not yet in the repo).
 
 ## Opening, structure, closing
 
@@ -48,6 +48,20 @@ Decks: [showcase](demo/showcase/deck.html) · [PixelPine](demo/PixelPine-demo/de
 |---|---|---|
 | Walk through a big schematic block by block | One slide: the whole schematic in a fixed frame, a layer with highlight rectangles, a side panel with one text per block. `se:step` turns → / ← into zoom steps (CSS transform on the layer) before the deck moves on; `se:enter` resets to the overview. Script at the end of the deck | Nudgy `#sch` |
 | Show a live app or simulator during the talk | `data-click="off"` slide with an iframe created on `se:enter` and removed on `se:leave`, a "connecting" screen while the local server isn't reachable, buttons to switch pages; keys stay with the deck | Nudgy `#simlive`, `#live` |
+
+## Process animations (explaining how something works)
+
+Deck: [Impedance](demo/Impedance-demo/deck.html) (Czech, scope theme).
+
+| need | solution | where |
+|---|---|---|
+| Explain a process step by step, video-like | One canvas per slide inside a dark "screen" panel (`data-fx="power"`), drawn every frame by a small scene function `draw(g, S)` from `S.step` and `S.ts` (time since the step began). `se:step` turns → / ← into scene steps before the deck moves on (← shows the earlier step finished); `se:enter` restarts at step 0, `se:leave` stops the loop. Step dots in the panel corner | Impedance `#iv`, `#block`, `#avg` |
+| Captions that follow the steps | Beside the panel, one `p.cap` per step with `data-step="n"`: shown from step n on, earlier ones dimmed; the container has `data-fx="none"` so the engine's builds don't fight the step classes | Impedance `#z`, `#pair` |
+| Let the audience change a parameter live | Buttons inside the panel, slide marked `data-click="off"` so clicks don't change slides; the scene eases toward the new value (phase of a phasor, 1 pin vs 2 pins) | Impedance `#z`, `#pair` |
+| Real measured or simulated curves in an animation | A script in the project exports the data to `media/data.js` (`window.X = {...}`), linked as a plain, not deferred, `<script>` before the engine; captions fill their numbers from it (`data-v`), so slide text can't drift from the results. `build.py` keeps non-deferred scripts in place | Impedance `#pair` (ngspice waveforms), `#cal` |
+| Show why the alternatives lose | A grid of cards; each step crosses some out (a red line grows across the name, the reason appears in red), the winner gets an accent border and grows | Impedance `#methods` |
+| A shift register / digital logic at work | Boxes for the cells, the bits shift on a timer, the feedback bit travels along the XOR wire as a glowing dot, the output is appended to a scrolling waveform | Impedance `#mls` |
+| Averaging noise away | The same curve redrawn with fresh noise every frame (one period, red) and the running average (green) while a counter N climbs; noise exaggerated and labelled as such | Impedance `#avg` |
 
 ## Text, code and lists
 

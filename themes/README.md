@@ -117,6 +117,7 @@ them when the slide is left, and the overview, the planner and `tools/check-deck
 | **core** (built into `engine.js`) | neutral: cube turns, iris, blinds, dissolve, zoom, vortex and the automatic element builds | 10 transitions, 13 effects, 2 dot styles | | [showcase](../demo/showcase/deck.html) |
 | [**pixelpine**](pixelpine/README.md) | Glowing LED matrix wipes and a twinkling LED background, from the PixelPine Christmas tree talk. | 4 transitions, 1 ambient, 1 dot style | electronics, glow, led | [PixelPine-demo](../demo/PixelPine-demo/deck.html) |
 | [**pmic**](pmic/README.md) | Power-management look: PWM pulse-train and power-up-sequence wipes, a converter-ringing settle effect, PCB traces with pulses and a staircase of rising supply rails as progress. | 2 transitions, 1 effect, 1 ambient, 1 dot style | electronics, pcb, power |  |
+| [**scope**](scope/README.md) | An oscilloscope look: a beam that writes the next slide, a CRT switch-off, a graticule with phosphor traces, SVG lines that draw themselves. | 2 transitions, 1 effect, 1 ambient | electronics, glow, measurement | [Impedance-demo](../demo/Impedance-demo/deck.html) |
 | [**train**](train/README.md) | A toy steam loco pulls slides away as wagons, steam clouds, a tunnel, level-crossing barriers, cards on wheels. | 5 transitions, 4 effects, 1 ambient, 1 dot style | playful, steam, transport | [Nudgy-demo](../demo/Nudgy-demo/deck.html) |
 
 ### Transitions (`data-enter`), A–Z
@@ -125,6 +126,7 @@ them when the slide is left, and the overview, the planner and `tools/check-deck
 |---|---|
 | `barrier` | [train](train/README.md) |
 | `blinds` | core |
+| `crt` | [scope](scope/README.md) |
 | `cube-x` | core |
 | `cube-y` | core |
 | `dissolve` | core |
@@ -138,6 +140,7 @@ them when the slide is left, and the overview, the planner and `tools/check-deck
 | `none` | core |
 | `pwm-wipe` | [pmic](pmic/README.md) |
 | `rail-sweep` | [pmic](pmic/README.md) |
+| `scope-sweep` | [scope](scope/README.md) |
 | `steam` | [train](train/README.md) |
 | `track` | [train](train/README.md) |
 | `train` | [train](train/README.md) |
@@ -166,6 +169,7 @@ them when the slide is left, and the overview, the planner and `tools/check-deck
 | `spin3d` | core |
 | `tilt` | core |
 | `tow` | [train](train/README.md) |
+| `trace` | [scope](scope/README.md) |
 | `wagon` | [train](train/README.md) |
 
 ### Ambient backgrounds (`data-ambient`), A–Z
@@ -174,6 +178,7 @@ them when the slide is left, and the overview, the planner and `tools/check-deck
 |---|---|
 | `leds` | [pixelpine](pixelpine/README.md) |
 | `rails` | [pmic](pmic/README.md) |
+| `scope-grid` | [scope](scope/README.md) |
 | `trains` | [train](train/README.md) |
 
 ### Progress dot styles (`data-dots`), A–Z
@@ -190,9 +195,10 @@ them when the slide is left, and the overview, the planner and `tools/check-deck
 
 | tag | themes |
 |---|---|
-| electronics | [pixelpine](pixelpine/README.md), [pmic](pmic/README.md) |
-| glow | [pixelpine](pixelpine/README.md) |
+| electronics | [pixelpine](pixelpine/README.md), [pmic](pmic/README.md), [scope](scope/README.md) |
+| glow | [pixelpine](pixelpine/README.md), [scope](scope/README.md) |
 | led | [pixelpine](pixelpine/README.md) |
+| measurement | [scope](scope/README.md) |
 | pcb | [pmic](pmic/README.md) |
 | playful | [train](train/README.md) |
 | power | [pmic](pmic/README.md) |

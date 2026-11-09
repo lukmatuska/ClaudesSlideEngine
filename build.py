@@ -58,7 +58,11 @@ def main():
         path = local(base, m.group(1))
         if not path:
             return m.group(0)
-        scripts.append(open(path, encoding="utf-8").read().replace("</script", "<\\/script"))
+        text = open(path, encoding="utf-8").read().replace("</script", "<\\/script")
+        if not re.search(r"\bdefer\b", m.group(0)):
+            # a plain (not deferred) script runs where it stands, e.g. data that later inline scripts read
+            return f"<script>\n{text}\n</script>"
+        scripts.append(text)      # deferred (themes, engine): after the deck, in their original order
         return ""
     html = re.sub(r'<script\b[^>]*src="([^"]+)"[^>]*>\s*</script>', js, html)
 

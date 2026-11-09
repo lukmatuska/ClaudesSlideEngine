@@ -89,6 +89,31 @@ window.SE_CATALOGUE = {
    }
   },
   {
+   "name": "scope",
+   "title": "Scope (oscilloscope)",
+   "description": "An oscilloscope look: a beam that writes the next slide, a CRT switch-off, a graticule with phosphor traces, SVG lines that draw themselves.",
+   "accent": "#4FE3A0",
+   "options": {
+    "data-scope-bg": "screen colour behind the scope-grid ambient (default #08110d)"
+   },
+   "preview": {
+    "trace": "<svg width=\"900\" height=\"300\" viewBox=\"0 0 900 300\" data-fx=\"trace\"><path d=\"M0 150 C 75 0, 150 0, 225 150 S 375 300, 450 150 S 600 0, 675 150 S 825 300, 900 150\" fill=\"none\" stroke=\"#2a9d6e\" stroke-width=\"8\"/><circle cx=\"450\" cy=\"150\" r=\"24\" fill=\"#4FE3A0\" stroke=\"#2a9d6e\" stroke-width=\"6\"/></svg>"
+   },
+   "provides": {
+    "transitions": [
+     "crt",
+     "scope-sweep"
+    ],
+    "effects": [
+     "trace"
+    ],
+    "ambients": [
+     "scope-grid"
+    ],
+    "dots": []
+   }
+  },
+  {
    "name": "train",
    "title": "Train",
    "description": "A toy steam loco pulls slides away as wagons, steam clouds, a tunnel, level-crossing barriers, cards on wheels.",

@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Měření impedance</title>
+<!-- Source of the talk. Build the single-file version from this folder with:
+     py -3 ../../build.py deck.html -o Impedance.html
+     The animations draw real simulation data from media/data.js (presentation/tools/export_data.py). -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=Nunito+Sans:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="../../engine.css">
+<script src="media/data.js"></script>
+<script src="../../themes/scope/theme.js" defer></script>
+<script src="../../engine.js" defer></script>
+<style>
+  .se-slide { font-family: 'Nunito Sans', Arial, sans-serif; }
+  .light { background: #F5F0E6; color: #16271F; padding: 96px 128px 112px; display: flex; flex-direction: column; gap: 40px; }
+  .dark { background: #13221B; color: #F5F0E6; padding: 128px; display: flex; flex-direction: column; justify-content: center; gap: 40px; }
+  h1, h2 { font-family: 'Nunito', Arial, sans-serif; font-weight: 800; }
+  h2 { font-size: 64px; line-height: 1.15; }
+  .t { font-size: 40px; line-height: 1.3; }
+  .l { font-size: 32px; line-height: 1.3; }
+  .kicker { font-size: 32px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #4FE3A0; }
+  .row { display: flex; flex-direction: row; gap: 48px; align-items: flex-start; }
+
+  /* the oscilloscope screen that holds a process animation */
+  .scr { position: relative; flex: none; background: #08110d; border-radius: 24px; box-shadow: 0 14px 44px rgba(22, 39, 31, .28), inset 0 0 0 3px #1d3529; }
+  .scr canvas { display: block; border-radius: 24px; }
+  .sd { position: absolute; right: 28px; bottom: 22px; display: flex; gap: 10px; }
+  .sd i { width: 14px; height: 14px; border-radius: 50%; background: #2a4437; transition: background .3s, box-shadow .3s; }
+  .sd i.on { background: #4FE3A0; box-shadow: 0 0 10px #4FE3A0; }
+  .btns { position: absolute; left: 24px; bottom: 18px; display: flex; gap: 12px; }
+  .btns button { font: 700 32px 'Nunito Sans', Arial, sans-serif; padding: 4px 22px; border-radius: 14px; border: 2px solid #2f5544;
+    background: #0d1c15; color: #9fd9bd; cursor: pointer; transition: background .25s, color .25s; }
+  .btns button.on { background: #4FE3A0; color: #08110d; border-color: #4FE3A0; }
+
+  /* captions that follow the steps */
+  .caps { display: flex; flex-direction: column; gap: 26px; flex: 1; min-width: 0; }
+  .cap { font-size: 32px; line-height: 1.32; opacity: 0; transform: translateY(18px); transition: opacity .6s, transform .6s, color .6s; color: #16271F; }
+  .cap.on { opacity: 1; transform: none; }
+  .cap.past { color: #6b7a72; }
+  .cap b { color: #1f7a55; }
+  .cap sub { font-size: 32px; line-height: 0; }      /* projector sizes only: subscripts stay 32 px */
+  .cap .big { font-family: 'Nunito', Arial, sans-serif; font-size: 40px; font-weight: 600; }
+  .vu { color: #1f8a5c; } .vi { color: #c7801f; } .vc { color: #2a7fb8; } .vr { color: #c0412f; }
+  .fixed { font-size: 32px; color: #6b7a72; border-top: 2px solid #E2D9C6; padding-top: 18px; margin-top: auto; }
+
+  /* methods slide */
+  .mgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .m { position: relative; background: #FFFCF6; border: 3px solid #E2D9C6; border-radius: 22px; padding: 22px 28px; display: flex; flex-direction: column; gap: 6px; transition: opacity .6s, transform .6s, border-color .6s, background .6s; }
+  .m .n { font-family: 'Nunito', Arial, sans-serif; font-size: 40px; font-weight: 600; line-height: 1.15; }
+  .m .why { font-size: 32px; line-height: 1.25; color: #6b7a72; max-height: 0; overflow: hidden; transition: max-height .6s, color .6s; }
+  .m::after { content: ''; position: absolute; left: 22px; top: 44px; height: 5px; width: 0; background: #c0412f; border-radius: 3px; transition: width .7s cubic-bezier(.6,0,.2,1); }
+  .m.out { opacity: .55; }
+  .m.out::after { width: calc(100% - 44px); }
+  .m.out .why, .m.win .why { max-height: 90px; }
+  .m.out .why { color: #c0412f; }
+  .m.win { border-color: #1f8a5c; background: #E6F6EC; transform: scale(1.04); opacity: 1; }
+  .m.win .why { color: #1f7a55; }
+  .det { display: flex; gap: 20px; opacity: 0; transform: translateY(20px); transition: opacity .6s, transform .6s; }
+  .det.on { opacity: 1; transform: none; }
+  .det .m { flex: 1; padding: 16px 22px; }
+  .det .m .n { font-size: 32px; }
+  .det .m::after { top: 36px; }
+
+  /* comparison table */
+  table.cmp { border-collapse: collapse; font-size: 32px; width: 100%; }
+  table.cmp th { text-align: left; font-weight: 700; color: #6b7a72; padding: 10px 20px; border-bottom: 3px solid #E2D9C6; }
+  table.cmp td { padding: 14px 20px; border-bottom: 2px solid #E2D9C6; line-height: 1.25; vertical-align: top; }
+  table.cmp tr.us td { background: #E6F6EC; font-weight: 700; }
+</style>
+</head>
+<body data-accent="#4FE3A0" data-lang="cs" data-scope-bg="#08110d">
+
+<!-- 1 · title -->
+<section id="cover" data-ambient="scope-grid" class="dark">
+  <p class="kicker">KTE · Projekt 3</p>
+  <h1 style="font-size:128px; line-height:1.05">Jak změřit impedanci</h1>
+  <p class="t" style="max-width:1300px; color:#DCEFE4">Vstupní blok analyzátoru impedance: mikrokontrolér, rezistory a zdroj pseudonáhodné sekvence. 20 Hz – 100 kHz.</p>
+  <p class="l" style="color:#9FBFAE">Bc. Marek Mach · listopad 2026</p>
+  <aside>Dobrý den. Prezentace popisuje princip měření impedance, tedy odpor, kapacitu nebo indukčnost součástky, na frekvencích od dvaceti hertzů do sto kilohertzů. Zadání bylo navrhnout vstupní blok analyzátoru: zdroj měřicího napětí a to, co z měření dostane impedanci. Následuje přehled metod měření, důvody volby metody a její výhody. Animace zobrazují data ze simulace obvodu.</aside>
+</section>
+
+<!-- 2 · what impedance is -->
+<section id="z" class="light" data-enter="scope-sweep" data-click="off">
+  <h2>Impedance</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1080" data-h="720"></canvas><div class="sd"></div>
+      <div class="btns"><button data-z="0">R</button><button data-z="-90">C</button><button data-z="90">L</button><button data-z="-45">R‖C</button></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0">Na <b class="vu">sinusové napětí U</b> odpoví <b class="vi">proud I</b> s jinou amplitudou a <b>posunem φ</b>.</p>
+      <p class="cap" data-step="0"><span class="big">|Z| = Û / Î</span> a <span class="big">φ</span>: dvě čísla na každé frekvenci.</p>
+      <p class="fixed">Zadání: 20 Hz – 100 kHz, měřicí napětí kolem 1 V, navrhnout jen vstupní blok.</p>
+    </div>
+  </div>
+  <aside>Impedance není jedno číslo. Když se na součástku přivede sinusové napětí, proud má nějakou amplitudu a je proti napětí posunutý. Poměr amplitud je velikost impedance, posun je fáze. Na rezistoru je posun nulový, na kondenzátoru proud předbíhá o devadesát stupňů, na cívce se o devadesát zpožďuje. Obě čísla dohromady dávají komplexní impedanci: reálná část je odpor, imaginární reaktance. Měřič tedy musí na každé frekvenci zjistit dvě věci: poměr amplitud a fázový posun.</aside>
+</section>
+
+<!-- 3 · methods -->
+<section id="methods" class="light" data-enter="cube-y">
+  <h2>Způsoby měření impedance</h2>
+  <div class="mgrid" data-fx="none">
+    <div class="m" data-out="1"><span class="n">Můstek</span><span class="why">vyvažuje se ručně nebo motorem</span></div>
+    <div class="m" data-out="1"><span class="n">Rezonance (Q-metr)</span><span class="why">jen L a C, jedna frekvence</span></div>
+    <div class="m" data-out="1"><span class="n">RF / síťový analyzátor</span><span class="why">pásmo MHz až GHz</span></div>
+    <div class="m" data-out="2"><span class="n">Měřicí čip AD5933</span><span class="why">metoda uzavřená v čipu, od 1 kHz</span></div>
+    <div class="m" data-out="2"><span class="n">Auto-balancing můstek</span><span class="why">potřebuje externí zesilovač</span></div>
+    <div class="m" data-win="3"><span class="n">Metoda I-V</span><span class="why">rezistor, zdroj a A/D převodník</span></div>
+  </div>
+  <p class="cap" data-step="4" data-fx="none">A jak z naměřených vzorků dostat fázi?</p>
+  <div class="det" data-step="4" data-fx="none">
+    <div class="m" data-out="5"><span class="n">Jen amplituda</span><span class="why">fázi nezná</span></div>
+    <div class="m" data-out="5"><span class="n">Průchody nulou</span><span class="why">citlivé na šum</span></div>
+    <div class="m" data-out="5"><span class="n">Analogový lock-in</span><span class="why">analogové násobičky</span></div>
+    <div class="m" data-win="6"><span class="n">Digitální lock-in</span><span class="why">jen výpočet v MCU</span></div>
+  </div>
+  <div class="sd" style="position:absolute; left:128px; bottom:56px"></div>
+  <aside>Metod měření impedance je víc. Můstek se musí vyvažovat, rezonanční metoda měří jen cívky a kondenzátory na jedné frekvenci, vysokofrekvenční analyzátory jsou pro jiné pásmo. Hotový měřicí čip AD5933 by úlohu vyřešil, ale metoda by byla uzavřená v čipu a pod jeden kilohertz potřebuje vnější hodiny. Auto-balancing můstek, který používají laboratorní přístroje, je nejpřesnější, ale potřebuje zesilovač, a ten zadání vylučuje. Zbývá metoda I-V: zdroj, referenční rezistor a převodník. Fáze se pak zjistí digitálním lock-inem, tedy výpočtem přímo v mikrokontroléru.</aside>
+</section>
+
+<!-- 4 · I-V and lock-in -->
+<section id="iv" class="light" data-enter="crt">
+  <h2>Metoda I-V a digitální lock-in</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1080" data-h="720"></canvas><div class="sd"></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0">Proud ze zdroje prochází <b>známým rezistorem Rref</b> a měřenou součástkou.</p>
+      <p class="cap" data-step="1">Proud dá napětí na Rref: <b>I = V<sub>Rref</sub> / Rref</b>. Pak <b>Z = V<sub>Z</sub> / I</b>.</p>
+      <p class="cap" data-step="2">Fázi najde lock-in: <b class="vu">vzorky</b> × <b class="vc">cos(2π·f·t)</b> právě měřené frekvence f, průměr = <b>reálná složka</b>. Kosinus se neměří, <b>počítá ho MCU</b>.</p>
+      <p class="cap" data-step="3">× <b class="vi">sin(2π·f·t)</b> téže frekvence = imaginární složka. Ostatní frekvence se vyprůměrují na nulu. Je to jeden bin DFT: <b>Goertzelův algoritmus</b>.</p>
+      <p class="cap" data-step="3">Sekvence obsahuje všechny frekvence najednou: výpočet se <b>zopakuje pro každou z 30 frekvencí</b> na tomtéž záznamu.</p>
+    </div>
+  </div>
+  <aside>Metoda I-V je jednoduchá. Zdroj pošle proud přes známý referenční rezistor a měřenou součástku zapojené za sebou. Napětí na rezistoru dělené jeho hodnotou je proud, napětí na součástce dělené proudem je impedance. Fáze se zjistí digitálním lock-inem: vzorky signálu se násobí kosinem právě měřené frekvence, který mikrokontrolér sám počítá, nic se při tom neměří, a výsledek se průměruje. Kladné a záporné části se vyruší a zbude reálná složka. Se sinem se stejně získá imaginární složka. Všechny ostatní frekvence se při průměrování vyruší na nulu. Je to přesně jeden bin diskrétní Fourierovy transformace a v mikrokontroléru ho počítá Goertzelův algoritmus. Protože pseudonáhodná sekvence obsahuje všechny frekvence najednou, opakuje se tento výpočet pro každou ze třiceti frekvencí na tomtéž zaznamenaném průběhu, pokaždé s kosinem a sinem té dané frekvence.</aside>
+</section>
+
+<!-- 5 · classic frequency sweep -->
+<section id="sweep" class="light" data-click="off" data-enter="iris">
+  <h2>Klasika: rozmítání frekvence</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1080" data-h="720"></canvas><div class="sd"></div><div class="btns"><button data-dut="rlc">RLC</button><button data-dut="c">C</button><button data-dut="l">L</button></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0">Na součástku se přivede <b class="vu">sinus jedné frekvence</b>, změří se poměr a posun <b class="vi">proudu</b> a vynese se <b>jeden bod</b> grafu.</p>
+      <p class="cap" data-step="1">Pak další frekvence. Celá křivka = <span class="big">30 měření za sebou</span>, každé čeká na ustálení.</p>
+      <p class="cap" data-step="0" data-keep="1" style="color:#6b7a72">Měřená součástka je vpravo nahoře, tlačítky RLC / C / L se přepíná.</p>
+    </div>
+  </div>
+  <aside>Klasický impedanční analyzátor měří postupně. Na součástku se přivede sinus jedné frekvence, změří se poměr amplitud a fázový posun proudu a do grafu se vynese jeden bod. Pak se frekvence změní a měření se opakuje. Ukázková součástka je sériový obvod cívky, kondenzátoru a rezistoru; křivka má minimum v rezonanci. Třicet bodů znamená třicet samostatných měření, každé s ustálením a několika periodami. Otázka zní, zda lze všechny frekvence změřit najednou.</aside>
+</section>
+
+<!-- 6 · sines add up to a pulse -->
+<section id="sum" class="light" data-enter="cube-y">
+  <h2>Všechny frekvence najednou = impuls</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1080" data-h="720"></canvas><div class="sd"></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0">Několik sinusovek <b>různých frekvencí</b>, všechny se stejnou amplitudou a fází.</p>
+      <p class="cap" data-step="1">Jejich <b>součet</b>: čím víc frekvencí, tím užší a vyšší špička.</p>
+      <p class="cap" data-step="2">Výsledek je <span class="big">jeden krátký impuls</span>. Obsahuje všechny frekvence se stejnou amplitudou.</p>
+    </div>
+  </div>
+  <aside>Místo třiceti sinusovek po sobě je lze přivést všechny současně. Když se sečte mnoho sinusovek různých frekvencí se stejnou amplitudou a nulovou fází, v jednom okamžiku se všechny sečtou a jinde se navzájem vyruší. Čím víc frekvencí, tím užší a vyšší je výsledná špička. V limitě vznikne krátký impuls. Platí to i obráceně: krátký impuls obsahuje všechny frekvence až do převrácené hodnoty své šířky, všechny se stejnou amplitudou.</aside>
+</section>
+
+<!-- 7 · one pulse response gives the whole curve -->
+<section id="resp" class="light" data-click="off" data-enter="vortex">
+  <h2>Jeden impuls, celá křivka</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1080" data-h="720"></canvas><div class="sd"></div><div class="btns"><button data-dut="rlc">RLC</button><button data-dut="c">C</button><button data-dut="l">L</button></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0">Na součástku se přivede <b class="vu">impuls napětí</b>. <b class="vi">Proud</b> je odezva součástky: RLC zakmitá, C dá dvojitou špičku, L náběh a pomalý pokles.</p>
+      <p class="cap" data-step="1">Fourierova transformace rozloží oba průběhy na frekvence: <b class="vu">U(f)</b> a <b class="vi">I(f)</b>.</p>
+      <p class="cap" data-step="2">Na každé frekvenci <b>Z(f) = U(f) / I(f)</b>: <span class="big">jedno měření, všechny body</span>, stejná křivka jako u rozmítání.</p>
+    </div>
+  </div>
+  <aside>Na součástku se tedy přivede jediný krátký impuls napětí a zaznamená se proud. Sériový obvod odpoví zakmitáním na své rezonanční frekvenci. Oba průběhy se Fourierovou transformací rozloží na frekvence. Protože impuls obsahuje všechny frekvence, dá podíl napětí a proudu na každé frekvenci přímo impedanci. Jediné měření tak dá celou křivku, a body leží přesně na křivce z rozmítání. Zbývá jeden praktický problém, energie impulsu, a ten řeší následující slide.</aside>
+</section>
+
+<!-- 8 · why a single pulse does not work in this design -->
+<section id="why" class="light" data-enter="dissolve">
+  <h2>Proč jeden impuls v našem obvodu nestačí</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1080" data-h="720"></canvas><div class="sd"></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0"><b>Výška</b> je omezená: piny dají kolem středu jen zhruba ±0,6–0,7 V. <b>Šířka</b> nejvýš 1 bit (4,7 µs), jinak chybí 100 kHz.</p>
+      <p class="cap" data-step="1">Pseudonáhodná sekvence má <b>plnou výšku po celou periodu</b>: <span class="big">511× víc energie</span> při stejném spektru.</p>
+      <p class="cap" data-step="2">Se samotným impulsem by šum ADC vyžadoval <b>511× delší průměrování</b>: <span class="big">minuty místo sekund</span>.</p>
+    </div>
+  </div>
+  <aside>Proč tedy ne jeden impuls přímo? Výšku impulsu omezuje napájení: piny se přepínají mezi zemí a 3,3 voltu a zdroj kmitá kolem středu nejvýš o šest až sedm desetin voltu. Šířka je omezená shora, protože impuls musí obsahovat i sto kilohertzů, takže nejvýš jeden bit, 4,7 mikrosekundy. Energie impulsu je pak nepatrná proti šumu převodníku. Pseudonáhodná sekvence má stejně ploché spektrum, ale plnou výšku po celou periodu, tedy 511krát víc energie. Kdyby se měřilo samotným impulsem, musel by se pro stejnou přesnost průměrovat 511krát déle: místo zhruba tří a půl sekundy by měření jednoho rozsahu trvalo přes dvacet minut.</aside>
+</section>
+
+<!-- 5 · pulse to MLS -->
+<section id="mls" class="light" data-enter="zoom">
+  <h2>Zdroj: jeden impuls, nebo pseudonáhodná sekvence?</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1080" data-h="720"></canvas><div class="sd"></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0">Sinus měří jednu frekvenci. <b>Impuls</b> obsahuje všechny, ale při 1 V nese <b>málo energie</b>.</p>
+      <p class="cap" data-step="1">Posuvný registr s XOR (odbočky 9 a 5) vyrábí <b>MLS</b>: 511 bitů, pak se opakuje.</p>
+      <p class="cap" data-step="2">Spektrum je <b>ploché jako u impulsu</b>, ale <span class="big">511× víc energie (+27 dB)</span> při stejném napětí.</p>
+    </div>
+  </div>
+  <aside>Jako zdroj by šel sinus z převodníku, ale ten měří jednu frekvenci a třicet frekvencí by se měřilo postupně. Ostrý impuls obsahuje všechny frekvence najednou, jenže při omezení na jeden volt nese velmi málo energie a výsledek by byl zašuměný. Řešením je pseudonáhodná sekvence maximální délky. Vyrábí ji posuvný registr s devíti buňkami a hradlem XOR, prochází všech 511 stavů a pak se opakuje. Její spektrum je ploché stejně jako u impulsu, ale každý bit má plnou amplitudu, takže při stejném napětí nese 511krát víc energie, o dvacet sedm decibelů víc. Generuje ji běžný výstupní pin mikrokontroléru.</aside>
+</section>
+
+<!-- 7 · input block -->
+<section id="block" class="light" data-enter="blinds">
+  <h2>Vstupní blok</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1180" data-h="720"></canvas><div class="sd"></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0">Pár pinů vysílá sekvenci a její negaci přes <b>R<sub>a</sub>, R<sub>b</sub></b> do uzlu <b class="vu">A</b>.</p>
+      <p class="cap" data-step="1">Proud teče součástkou do uzlu <b class="vc">M</b>: dělič drží VDD/2, 47 µF vede proud.</p>
+      <p class="cap" data-step="2">A i M: sledovač, filtr 193 kHz a <b>dva A/D převodníky ve stejném okamžiku</b>. Vše uvnitř MCU.</p>
+      <p class="cap" data-step="3">Rozsahy bez přepínačů: aktivní je jeden pár, <b>ostatní piny Hi-Z</b>.</p>
+      <p class="cap" data-step="4"><span class="big">Z = (<span class="vu">V<sub>A</sub></span> − <span class="vc">V<sub>M</sub></span>)·Rref / (<span class="vi">V<sub>src</sub></span> − <span class="vu">V<sub>A</sub></span>)</span><br><span class="vi">V<sub>src</sub></span> se neměří: je to známá sekvence × VDD.</p>
+    </div>
+  </div>
+  <aside>Zapojení vstupního bloku. Pár pinů vysílá sekvenci a její negaci, přes dva rezistory do uzlu A. Za uzlem je měřená součástka a její druhý konec, uzel M, drží dělič na polovině napájení a kondenzátor vede střídavý proud. Oba uzly jdou přes operační zesilovač zapojený jako sledovač a přes druhý jako filtr proti aliasingu do dvou převodníků, které vzorkují ve stejném okamžiku. Zesilovače i převodníky jsou uvnitř mikrokontroléru CH32V303, venku jsou jen rezistory a kondenzátory. Rozsah se mění tak, že aktivní je jen jeden pár pinů a ostatní jsou ve vysoké impedanci. Napětí zdroje se neměří: piny se přepínají mezi zemí a napájením a napájení je zároveň referencí převodníku, takže zdroj je v jednotkách převodníku přesně známý.</aside>
+</section>
+
+<!-- 8 · sampling, averaging, passes -->
+<section id="avg" class="light" data-enter="crt">
+  <h2>Vzorkování, průměrování a tři pásma</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1080" data-h="720"></canvas><div class="sd"></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0">Jeden časovač řídí bity i vzorky: <b>4 vzorky na bit</b>, 857 tisíc za sekundu. Vzorky padají vždy na stejná místa.</p>
+      <p class="cap" data-step="1">Periody se <b>sčítají do jedné</b> (16 KB RAM). Šum klesá jako <b>1/√N</b>.</p>
+      <p class="cap" data-step="2">Stejná sekvence <b>třikrát</b>, pokaždé pomaleji (÷16, ÷256): <b>30 frekvencí, asi 3,4 s na rozsah</b>.</p>
+    </div>
+  </div>
+  <aside>Časovač, který posílá bity sekvence na piny, zároveň spouští převodníky. Na každý bit připadají čtyři vzorky a protože se sekvence opakuje, padají vzorky v každé periodě přesně na stejná místa. Díky tomu se periody mohou sčítat do jednoho uloženého záznamu: šum se průměruje a klesá s odmocninou počtu period, signál zůstává. Paměť přitom neroste, jeden záznam má šestnáct kilobajtů. Pro nízké frekvence se vysílá stejná sekvence šestnáctkrát a dvěstěpadesátšestkrát pomaleji. Převodník přitom vzorkuje pořád stejně rychle a firmware vzorky decimuje, takže analogový filtr může zůstat pevný. Třicet frekvencí od dvaceti hertzů do sto kilohertzů trvá na jednom rozsahu asi tři a půl sekundy.</aside>
+</section>
+
+<!-- 9 · calibration and result -->
+<section id="cal" class="light" data-enter="cube-x">
+  <h2>Kalibrace a výsledek simulace</h2>
+  <div class="row">
+    <div class="scr" data-fx="power"><canvas data-w="1080" data-h="720"></canvas><div class="sd"></div></div>
+    <div class="caps" data-fx="none">
+      <p class="cap" data-step="0">Bez kalibrace měří blok <b class="vi">nepřesně</b>: odpor pinů, tolerance, parazitní kapacity, filtry.</p>
+      <p class="cap" data-step="1"><b>Tři známé etalony</b> (zkrat, Rref, 4·Rref) na každém rozsahu a frekvenci určí tři komplexní koeficienty: <b>Z = (Z<sub>m</sub> − b) / (a − c·Z<sub>m</sub>)</b>.</p>
+      <p class="cap" data-step="2">20 Hz – 100 kHz, chyba do 1 % a 1°: <span class="big"><span data-v="band"></span></span></p>
+    </div>
+  </div>
+  <aside>Skutečný obvod není ideální: piny mají odpor kolem padesáti ohmů, rezistory toleranci, uzly parazitní kapacitu a filtry mění fázi. Všechny tyto vlivy jsou ale lineární a dají se popsat třemi komplexními koeficienty. Ty se určí změřením tří známých etalonů, zkratu a dvou rezistorů, na každém rozsahu a frekvenci, a jejich vliv se pak jednoduchým vzorcem odstraní. V grafu jsou skutečné body ze simulace: bez kalibrace se třistatřicet kiloohmů změří jako čtyřicet dva, po kalibraci sedí. Celkově simulace dává přesnost do jednoho procenta a jednoho stupně od deseti ohmů do dvou set kiloohmů v celém pásmu.</aside>
+</section>
+
+<!-- 10 · comparison and limits -->
+<section id="cmp" class="light" data-enter="dissolve">
+  <h2>Srovnání s jinými přístupy</h2>
+  <table class="cmp">
+    <tr><th>Přístup</th><th>Navíc v obvodu</th><th>Frekvence</th><th>Slabina</th></tr>
+    <tr><td>Sinus z DAC, frekvence po jedné</td><td>nic</td><td>30 měření za sebou</td><td>DAC vyžaduje zátěž ≥ 5 kΩ: malé impedance neměří</td></tr>
+    <tr><td>Měřicí čip AD5933</td><td>čip + převodník proudu</td><td>od 1 kHz</td><td>metoda uzavřená v čipu</td></tr>
+    <tr><td>Auto-balancing můstek</td><td>zesilovač s proudovým výstupem</td><td>laboratorní přístroje</td><td>zadání zesilovač vylučuje</td></tr>
+    <tr class="us"><td>MLS z páru pinů + digitální lock-in</td><td>jen rezistory a kondenzátory</td><td>všechny body průchodu současně, 3 průchody</td><td>přesnost omezuje šum ADC</td></tr>
+  </table>
+  <aside>Shrnutí výhod. Sinus z převodníku měří frekvence jednu po druhé a převodník vyžaduje zátěž nejméně pět kiloohmů, takže malé impedance neměří. Piny mikrokontroléru dodají miliampéry, takže rozsah sahá na desítky ohmů, a sekvence měří všechny body jednoho průchodu najednou. Proti měřicímu čipu je metoda vidět a funguje od dvaceti hertzů. Proti auto-balancing můstku nepotřebuje žádný zesilovač: vše analogové je uvnitř mikrokontroléru, venku jen rezistory a kondenzátory a rozsahy se přepínají piny.</aside>
+</section>
+
+<!-- 11 · closing -->
+<section id="end" data-ambient="scope-grid" class="dark" data-enter="scope-sweep">
+  <p class="kicker">Shrnutí</p>
+  <ul class="t" style="display:flex; flex-direction:column; gap:20px; padding-left:44px; color:#DCEFE4; max-width:1500px">
+    <li>Impedance z poměru dvou napětí přes známý rezistor (I-V).</li>
+    <li>Zdroj je pseudonáhodná sekvence z páru pinů: všechny frekvence najednou.</li>
+    <li>Fáze a amplituda výpočtem v MCU, kalibrace třemi etalony.</li>
+  </ul>
+  <h1 style="font-size:96px; line-height:1.1">Děkuji za pozornost</h1>
+  <aside>Shrnutí. Impedance se měří metodou I-V, tedy z poměru dvou napětí přes známý rezistor. Zdrojem je pseudonáhodná sekvence z páru pinů, která obsahuje všechny frekvence najednou. Amplitudu i fázi počítá mikrokontrolér digitálním lock-inem a nepřesnosti obvodu odstraní kalibrace třemi etalony. Děkuji za pozornost.</aside>
+</section>
+
+<script>
+/* ------------------------------------------------------------------------------------------------------------------
+   Process animations. Every slide with a .scr canvas is a "scene": → / ← first step through the scene (engine se:step),
+   then the deck moves on. Captions with data-step="n" appear from step n on (older ones dim). All curves are real
+   simulation data from media/data.js (presentation/tools/export_data.py) or exact maths (MLS, DFT).
+   ------------------------------------------------------------------------------------------------------------------ */
+const D = window.IA_DATA;
+const COL = { bg: '#08110d', grid: 'rgba(79,227,160,.12)', axis: 'rgba(79,227,160,.38)', u: '#4FE3A0', i: '#FFC47D',
+  c: '#6CC8FF', r: '#FF6B5C', txt: '#DCEFE4', dim: '#7E9A8B', z: '#F5F0E6' };
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const io = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const P = (ts, delay, dur) => io((ts - delay) / dur);
+const lerp = (a, b, k) => a + (b - a) * k;
+const RES = 1.5;
+const fmtCz = (v, d = 2) => v.toFixed(d).replace('.', ',').replace('-', '−');
+function fmtOhm(v) {
+  if (v >= 1e6) return fmtCz(v / 1e6, v >= 1e7 ? 0 : 2).replace(/,?0+$/, '') + ' MΩ';
+  if (v >= 1e3) return (+(v / 1e3).toPrecision(3)).toString().replace('.', ',') + ' kΩ';
+  return (+v.toPrecision(3)).toString().replace('.', ',') + ' Ω';
+}
+
+/* ---------- drawing helpers ---------- */
+function font(g, px, w = 700, fam = 'Nunito Sans') { g.font = `${w} ${px}px '${fam}', Arial, sans-serif`; }
+/* text with subscripts written as V_{Rref} */
+function text(g, s, x, y, col = COL.txt, px = 32, align = 'left', w = 700, fam) {
+  const parts = String(s).split(/_\{([^}]*)\}/), sub = px * .68;
+  if (parts.length === 1) { font(g, px, w, fam); g.fillStyle = col; g.textAlign = align; g.textBaseline = 'middle'; g.fillText(s, x, y); return; }
+  let total = 0; parts.forEach((t, k) => { font(g, k % 2 ? sub : px, w, fam); total += g.measureText(t).width; });
+  let xx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  g.fillStyle = col; g.textAlign = 'left'; g.textBaseline = 'middle';
+  parts.forEach((t, k) => { font(g, k % 2 ? sub : px, w, fam); g.fillText(t, xx, y + (k % 2 ? px * .28 : 0)); xx += g.measureText(t).width; });
+}
+function glowLine(g, pts, col, w = 4, glow = 14, alpha = 1) {
+  if (pts.length < 2) return;
+  g.save(); g.globalAlpha = alpha; g.strokeStyle = col; g.lineWidth = w; g.lineJoin = g.lineCap = 'round';
+  g.shadowColor = col; g.shadowBlur = glow; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]);
+  for (let k = 1; k < pts.length; k++) g.lineTo(pts[k][0], pts[k][1]);
+  g.stroke(); g.restore();
+}
+function dot(g, x, y, r, col, glow = 18, alpha = 1) { g.save(); g.globalAlpha = alpha; g.fillStyle = col; g.shadowColor = col; g.shadowBlur = glow; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore(); }
+function grid(g, x, y, w, h, nx, ny, alpha = 1) {
+  g.save(); g.globalAlpha = alpha; g.strokeStyle = COL.grid; g.lineWidth = 1.5;
+  for (let k = 0; k <= nx; k++) { const xx = x + w * k / nx; g.beginPath(); g.moveTo(xx, y); g.lineTo(xx, y + h); g.stroke(); }
+  for (let k = 0; k <= ny; k++) { const yy = y + h * k / ny; g.beginPath(); g.moveTo(x, yy); g.lineTo(x + w, yy); g.stroke(); }
+  g.restore();
+}
+function arrow(g, x0, y0, x1, y1, col, w = 5, head = 18, alpha = 1) {
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  g.save(); g.globalAlpha = alpha; g.strokeStyle = g.fillStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.shadowColor = col; g.shadowBlur = 10;
+  g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1 - Math.cos(a) * head * .7, y1 - Math.sin(a) * head * .7); g.stroke();
+  g.beginPath(); g.moveTo(x1, y1); g.lineTo(x1 - Math.cos(a - .42) * head, y1 - Math.sin(a - .42) * head);
+  g.lineTo(x1 - Math.cos(a + .42) * head, y1 - Math.sin(a + .42) * head); g.closePath(); g.fill(); g.restore();
+}
+function dashed(g, x0, y0, x1, y1, col, alpha = .6, w = 2) { g.save(); g.globalAlpha = alpha; g.strokeStyle = col; g.lineWidth = w; g.setLineDash([8, 8]); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); g.restore(); }
+function resistor(g, x0, y0, x1, y1, col, alpha = 1, w = 4) {     // zigzag between two points on a straight wire
+  const L = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / L, uy = (y1 - y0) / L, nx = -uy, ny = ux, n = 6, amp = 14, seg = L * .6, s0 = (L - seg) / 2;
+  const pts = [[x0, y0], [x0 + ux * s0, y0 + uy * s0]];
+  for (let k = 0; k < n; k++) { const s = s0 + seg * (k + .5) / n, a = k % 2 ? -amp : amp; pts.push([x0 + ux * s + nx * a, y0 + uy * s + ny * a]); }
+  pts.push([x0 + ux * (s0 + seg), y0 + uy * (s0 + seg)], [x1, y1]);
+  glowLine(g, pts, col, w, 8, alpha);
+}
+function box(g, x, y, w, h, col, label, alpha = 1, fill = 'rgba(79,227,160,.06)', px = 32) {
+  g.save(); g.globalAlpha = alpha; g.fillStyle = fill; g.strokeStyle = col; g.lineWidth = 3; g.shadowColor = col; g.shadowBlur = 8;
+  g.beginPath(); g.roundRect(x, y, w, h, 12); g.fill(); g.stroke(); g.restore();
+  if (label) { g.save(); g.globalAlpha = alpha; text(g, label, x + w / 2, y + h / 2 + 1, col, px, 'center'); g.restore(); }
+}
+function opamp(g, x, y, s, col, alpha = 1, label) {    // triangle pointing right, input side at x, centre y
+  g.save(); g.globalAlpha = alpha; g.strokeStyle = col; g.fillStyle = 'rgba(79,227,160,.06)'; g.lineWidth = 3; g.shadowColor = col; g.shadowBlur = 8;
+  g.beginPath(); g.moveTo(x, y - s / 2); g.lineTo(x + s * .9, y); g.lineTo(x, y + s / 2); g.closePath(); g.fill(); g.stroke(); g.restore();
+  if (label) { g.save(); g.globalAlpha = alpha; text(g, label, x + s * .45, y - s / 2 - 22, COL.dim, 26, 'center'); g.restore(); }
+}
+function polyAt(pts, u) {               // point at fraction u along a polyline
+  let L = 0; const seg = [];
+  for (let k = 1; k < pts.length; k++) { const l = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); seg.push(l); L += l; }
+  let d = clamp(u) * L;
+  for (let k = 0; k < seg.length; k++) { if (d <= seg[k] || k === seg.length - 1) { const f = seg[k] ? d / seg[k] : 0; return [lerp(pts[k][0], pts[k + 1][0], f), lerp(pts[k][1], pts[k + 1][1], f)]; } d -= seg[k]; }
+  return pts[pts.length - 1];
+}
+function flow(g, pts, t, col, n = 4, speed = .45, alpha = 1, r = 7) { for (let k = 0; k < n; k++) { const u = ((t * speed + k / n) % 1 + 1) % 1; const [x, y] = polyAt(pts, u); dot(g, x, y, r, col, 16, alpha * Math.sin(Math.PI * u)); } }
+
+/* ---------- scene framework ---------- */
+function scene(id, def) {
+  const sec = document.getElementById(id);
+  const cv = sec.querySelector('canvas');
+  let g = null, W = 0, H = 0;
+  if (cv) { W = +cv.dataset.w; H = +cv.dataset.h; cv.width = W * RES; cv.height = H * RES; cv.style.width = W + 'px'; cv.style.height = H + 'px'; g = cv.getContext('2d'); }
+  const S = Object.assign({ step: 0, ts: 0, t: 0, n: def.steps, W, H, token: 0 }, def.state ? def.state() : {});
+  const dots = sec.querySelector('.sd');
+  if (dots) dots.innerHTML = '<i></i>'.repeat(def.steps);
+  function sync() {
+    sec.querySelectorAll('[data-step]').forEach(el => { const s = +el.dataset.step; el.classList.toggle('on', S.step >= s); el.classList.toggle('past', el.classList.contains('cap') && S.step > s && !el.dataset.keep); });
+    sec.querySelectorAll('[data-out]').forEach(el => el.classList.toggle('out', S.step >= +el.dataset.out));
+    sec.querySelectorAll('[data-win]').forEach(el => el.classList.toggle('win', S.step >= +el.dataset.win));
+    if (dots) [...dots.children].forEach((d, k) => d.classList.toggle('on', k <= S.step));
+    if (def.onStep) def.onStep(S);
+  }
+  function setStep(n, done) { S.step = n; S.ts = done ? 60 : 0; sync(); }
+  function frame(tok) {
+    let last = null;
+    const tick = now => {
+      if (tok !== S.token) return;
+      const dt = last == null ? 0 : Math.min(.1, (now - last) / 1000); last = now; S.t += dt; S.ts += dt;
+      if (g) { g.setTransform(RES, 0, 0, RES, 0, 0); g.clearRect(0, 0, W, H); def.draw(g, S, dt); }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  sec.addEventListener('se:step', e => { const n = S.step + e.detail.dir; if (n >= 0 && n < S.n) { e.preventDefault(); setStep(n, e.detail.dir < 0); } });
+  sec.addEventListener('se:enter', () => { S.token++; S.t = 0; if (def.reset) def.reset(S); setStep(0, false); frame(S.token); });
+  sec.addEventListener('se:leave', () => { const tok = S.token; setTimeout(() => { if (tok === S.token) S.token++; }, 1800); });
+  sec.querySelectorAll('button').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); if (def.button) def.button(S, b); syncButtons(); }));
+  function syncButtons() { if (def.buttonOn) sec.querySelectorAll('button').forEach(b => b.classList.toggle('on', def.buttonOn(S, b))); }
+  S.syncButtons = syncButtons;
+  sync();
+  return S;
+}
+
+/* ---------- P: presenter-notes window (1920 × 515, for a second display); keys pressed in it control the deck ---------- */
+(function notesWindow() {
+  let win = null;
+  function fit() {
+    if (!win || win.closed) return;
+    const d = win.document, box = d.getElementById('n');
+    let lo = 16, hi = 120;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; box.style.fontSize = m + 'px'; (box.scrollHeight <= d.documentElement.clientHeight - 8 && box.scrollWidth <= d.documentElement.clientWidth) ? lo = m : hi = m; }
+    box.style.fontSize = lo + 'px';
+  }
+  function show() {
+    if (!win || win.closed || !window.slideEngine) return;
+    const i = slideEngine.current, n = slideEngine.slides.length;
+    win.document.getElementById('h').textContent = `${i + 1} / ${n}`;
+    win.document.getElementById('n').textContent = (slideEngine.notes[i] || '').trim();
+    fit();
+  }
+  function open() {
+    if (win && !win.closed) { win.focus(); show(); return; }
+    win = window.open('', 'se-notes', 'width=1920,height=515');
+    if (!win) return;
+    win.document.write(`<!doctype html><meta charset="utf-8"><title>Poznámky</title><style>
+      html,body{margin:0;height:100%;background:#0b130f;color:#F5F0E6;font-family:'Nunito Sans',Arial,sans-serif;overflow:hidden}
+      #h{position:fixed;right:14px;top:6px;font:700 22px Arial;color:#4FE3A0}
+      #n{box-sizing:border-box;padding:6px 120px 6px 16px;line-height:1.22;white-space:pre-wrap}
+      #fs{position:fixed;right:10px;bottom:8px;font:700 18px Arial;padding:6px 12px;border-radius:8px;border:2px solid #4FE3A0;background:#0d1c15;color:#4FE3A0;cursor:pointer}</style>
+      <div id="h"></div><div id="n"></div><button id="fs">⛶ celá obrazovka</button>`);
+    win.document.close();
+    const fsBtn = win.document.getElementById('fs');
+    fsBtn.addEventListener('click', () => { const d = win.document; d.fullscreenElement ? d.exitFullscreen() : d.documentElement.requestFullscreen().catch(() => {}); fsBtn.blur(); });
+    win.document.addEventListener('fullscreenchange', () => setTimeout(fit, 100));
+    win.addEventListener('resize', fit);
+    win.addEventListener('keydown', e => { document.body.dispatchEvent(new KeyboardEvent('keydown', { key: e.key, code: e.code, bubbles: true })); e.preventDefault(); });
+    show();
+  }
+  window.addEventListener('keydown', e => { if ((e.key === 'p' || e.key === 'P') && !e.ctrlKey && !e.metaKey && !e.altKey) open(); }, true);
+  document.querySelectorAll('section').forEach(s => s.addEventListener('se:enter', () => setTimeout(show, 0)));
+  // live sync: also follow every slide change by polling (overview jumps, history navigation, any input path)
+  let shown = -1;
+  setInterval(() => { if (win && !win.closed && window.slideEngine && slideEngine.current !== shown) { shown = slideEngine.current; show(); } }, 150);
+})();
+
+/* numbers in captions come from the data file */
+(function fillValues() {
+  const dv = D.results.drive_variants, pick = (v, d) => dv.find(r => r.variant === v && r.dut === d);
+  const ext = k => { const a = D[k].a; return `${fmtCz(Math.min(...a))} V až ${fmtCz(Math.max(...a))} V`; };
+  const bb = D.results.best_band, lo = Math.min(...Object.values(bb).map(b => b.z_lo)), hi = Math.max(...Object.values(bb).map(b => b.z_hi));
+  const vals = { 'single-range': ext('coil_single'), 'pair-range': ext('coil_pair'),
+    'pair-err': fmtCz(pick('pin pair', '10 mH').max_mag_pct) + ' %', band: `${fmtOhm(lo)} – ${fmtOhm(hi)}`, ron: fmtCz(D.ron10) + ' %' };
+  document.querySelectorAll('[data-v]').forEach(el => { if (vals[el.dataset.v] !== undefined) el.textContent = vals[el.dataset.v]; });
+})();
+
+/* ================= 2 · impedance: rotating phasors and the sines they draw ================= */
+scene('z', {
+  steps: 1,
+  state: () => ({ phi: -45, target: -45 }),
+  reset(S) { S.phi = S.target = -45; S.syncButtons && S.syncButtons(); },
+  button(S, b) { S.target = +b.dataset.z; },
+  buttonOn: (S, b) => +b.dataset.z === S.target,
+  onStep(S) { S.syncButtons && S.syncButtons(); },
+  draw(g, S, dt) {
+    const st = 2, ts = S.ts + 9, th = S.t * 1.25;
+    S.phi += (S.target - S.phi) * Math.min(1, dt * 3.5);
+    const cx = 240, cy = 270, R = 180, x0 = 520, x1 = 1040, k = 95;
+    const aU = 1, aI = .62, phU = 0, phI = -S.phi * Math.PI / 180;      // phi = angle(U) - angle(I)
+    grid(g, x0, cy - 210, x1 - x0, 420, 8, 6);
+    g.strokeStyle = COL.axis; g.lineWidth = 2; g.beginPath(); g.moveTo(x0, cy); g.lineTo(x1, cy); g.moveTo(cx - R - 20, cy); g.lineTo(cx + R + 20, cy); g.moveTo(cx, cy - R - 20); g.lineTo(cx, cy + R + 20); g.stroke();
+    g.strokeStyle = 'rgba(79,227,160,.25)'; g.beginPath(); g.arc(cx, cy, R, 0, 7); g.stroke();
+    text(g, 't →', x1 - 10, cy + 34, COL.dim, 26, 'right');
+    const reveal = st === 0 ? P(ts, .4, 2.2) : 1;
+    const wave = (amp, ph, col, alpha) => {
+      const pts = [], xe = x0 + (x1 - x0) * reveal;
+      for (let x = x0; x <= xe; x += 4) pts.push([x, cy - R * amp * Math.sin(th + ph - (x - x0) / k)]);
+      glowLine(g, pts, col, 5, 14, alpha);
+      const tx = cx + R * amp * Math.cos(th + ph), ty = cy - R * amp * Math.sin(th + ph);
+      arrow(g, cx, cy, tx, ty, col, 6, 22, alpha);
+      dashed(g, tx, ty, x0, ty, col, .45 * alpha);
+      dot(g, x0, ty, 8, col, 18, alpha);
+    };
+    wave(aU, phU, COL.u, P(ts + (st > 0 ? 9 : 0), 0, .8));
+    text(g, 'U', cx + (R + 34) * Math.cos(th), cy - (R + 34) * Math.sin(th), COL.u, 40, 'center', 700, 'Nunito');
+    if (st >= 1) {
+      const a = st === 1 ? P(ts, .1, 1) : 1;
+      wave(aI, phI, COL.i, a);
+      g.save(); g.globalAlpha = a; text(g, 'I', cx + (R * aI + 34) * Math.cos(th + phI), cy - (R * aI + 34) * Math.sin(th + phI), COL.i, 40, 'center', 700, 'Nunito');
+      // the angle between the phasors
+      g.strokeStyle = COL.z; g.lineWidth = 3; g.beginPath(); const r0 = 70;
+      if (phI < 0) g.arc(cx, cy, r0, -th, -(th + phI)); else g.arc(cx, cy, r0, -(th + phI), -th);
+      g.stroke();
+      text(g, 'φ', cx + 100 * Math.cos(th + phI / 2), cy - 100 * Math.sin(th + phI / 2), COL.z, 40, 'center', 700, 'Nunito');
+      g.restore();
+    }
+    if (st >= 2) {
+      const a = st === 2 ? P(ts, .1, 1) : 1, phi = S.phi * Math.PI / 180, ox = 580, oy = 595, Lz = 82;
+      g.save(); g.globalAlpha = a;
+      g.strokeStyle = COL.axis; g.lineWidth = 2; g.beginPath(); g.moveTo(ox - 20, oy); g.lineTo(ox + 150, oy); g.moveTo(ox, oy + 105); g.lineTo(ox, oy - 105); g.stroke();
+      const zx = ox + Lz * Math.cos(phi), zy = oy - Lz * Math.sin(phi);
+      glowLine(g, [[ox, oy], [zx, oy]], COL.u, 9, 10); glowLine(g, [[zx, oy], [zx, zy]], COL.c, 9, 10);
+      arrow(g, ox, oy, zx, zy, COL.z, 5, 20);
+      text(g, 'R', (ox + zx) / 2, oy + 30, COL.u, 32, 'center'); text(g, 'jX', zx + 40, (oy + zy) / 2, COL.c, 32, 'center');
+      text(g, 'Z', zx + 26 * Math.cos(phi), zy - 26 * Math.sin(phi) - 6, COL.z, 40, 'center', 700, 'Nunito');
+      text(g, '|Z| = Û / Î', 780, 560, COL.txt, 40, 'left', 700, 'Nunito');
+      text(g, `φ = ${Math.round(S.phi)}°`, 780, 625, COL.txt, 40, 'left', 700, 'Nunito');
+      g.restore();
+    }
+  }
+});
+
+/* ================= 3 · methods: cards are crossed out step by step ================= */
+scene('methods', { steps: 7, draw() {} });
+
+/* ================= 4 · I-V circuit with moving charge, then the lock-in multiply-and-average ================= */
+scene('iv', {
+  steps: 4,
+  draw(g, S) {
+    const st = S.step, ts = S.ts, t = S.t, w = 2 * Math.PI * .55, ph0 = .9;
+    // circuit (top half): source -> Rref -> A -> DUT -> back
+    const sx = 110, sy = 190, ax = 560, top = 80, bot = 300, dx = 720;
+    const loop = [[sx, sy - 50], [sx, top], [ax, top], [dx, top], [dx, bot], [sx, bot], [sx, sy + 50]];
+    glowLine(g, [[sx, sy - 50], [sx, top], [260, top]], COL.dim, 4, 4); resistor(g, 260, top, 440, top, COL.c, 1, 5); glowLine(g, [[440, top], [dx, top], [dx, 140]], COL.dim, 4, 4);
+    box(g, dx - 45, 140, 90, 120, COL.u, 'Z'); glowLine(g, [[dx, 260], [dx, bot], [sx, bot], [sx, sy + 50]], COL.dim, 4, 4);
+    g.save(); g.strokeStyle = COL.i; g.lineWidth = 4; g.shadowColor = COL.i; g.shadowBlur = 10; g.beginPath(); g.arc(sx, sy, 50, 0, 7); g.stroke();
+    g.beginPath(); for (let x = -30; x <= 30; x += 2) g.lineTo(sx + x, sy - 18 * Math.sin(x / 30 * Math.PI)); g.stroke(); g.restore();
+    text(g, 'zdroj', sx, sy + 82, COL.i, 26, 'center'); text(g, 'Rref', 350, top - 40, COL.c, 32, 'center'); dot(g, ax, top, 8, COL.u, 10); text(g, 'A', ax, top - 34, COL.u, 32, 'center');
+    // AC current: charges slide back and forth along the loop
+    const disp = .06 * Math.sin(w * t);
+    for (let k = 0; k < 22; k++) { const [x, y] = polyAt(loop, ((k / 22 + disp) % 1 + 1) % 1); dot(g, x, y, 6, COL.i, 12, .9); }
+    if (st >= 1) {
+      const a = st === 1 ? P(ts, .1, 1) : 1;
+      g.save(); g.globalAlpha = a;
+      g.strokeStyle = COL.c; g.lineWidth = 3; g.beginPath(); g.moveTo(260, top + 26); g.lineTo(260, top + 46); g.lineTo(440, top + 46); g.lineTo(440, top + 26); g.stroke();
+      text(g, 'V_{Rref} → I = V_{Rref} / Rref', 350, top + 84, COL.c, 32, 'center');
+      g.strokeStyle = COL.u; g.beginPath(); g.moveTo(dx + 70, 140); g.lineTo(dx + 90, 140); g.lineTo(dx + 90, 260); g.lineTo(dx + 70, 260); g.stroke();
+      text(g, 'V_{Z}', dx + 112, 200, COL.u, 32, 'left'); text(g, 'Z = V_{Z} / I', dx + 112, 248, COL.z, 40, 'left', 700, 'Nunito');
+      g.restore();
+    }
+    // lock-in (bottom half)
+    if (st >= 2) {
+      const a = st === 2 ? P(ts, 0, .8) : 1, X0 = 60, X1 = 780, Y = 520, A = 95, per = (X1 - X0) / 2;
+      const cur = st === 2 ? P(ts, .6, 3.4) : (st === 3 ? P(ts, .6, 3.4) : 1);
+      const useSin = st === 3;
+      g.save(); g.globalAlpha = a;
+      grid(g, X0, Y - 130, X1 - X0, 260, 8, 4, .9);
+      const sig = x => Math.cos(2 * Math.PI * (x - X0) / per - ph0), ref = x => useSin ? Math.sin(2 * Math.PI * (x - X0) / per) : Math.cos(2 * Math.PI * (x - X0) / per);
+      const S1 = [], R1 = [], PR = []; let sum = 0, n = 0;
+      for (let x = X0; x <= X1; x += 3) { S1.push([x, Y - A * sig(x)]); R1.push([x, Y - A * ref(x)]); }
+      glowLine(g, R1, useSin ? COL.i : COL.c, 3, 6, .55); glowLine(g, S1, COL.u, 4, 10);
+      const xc = X0 + (X1 - X0) * cur;
+      g.save(); g.beginPath(); g.moveTo(X0, Y);
+      for (let x = X0; x <= xc; x += 3) { const p = sig(x) * ref(x); PR.push([x, Y - A * p]); sum += p; n++; g.lineTo(x, Y - A * p); }
+      g.lineTo(xc, Y); g.closePath(); g.fillStyle = 'rgba(245,240,230,.16)'; g.fill(); g.restore();
+      glowLine(g, PR, COL.z, 4, 10);
+      if (cur < 1) { g.strokeStyle = COL.z; g.lineWidth = 2; g.beginPath(); g.moveTo(xc, Y - 130); g.lineTo(xc, Y + 130); g.stroke(); }
+      text(g, 'vzorky', X0 + 8, Y - 112, COL.u, 26); text(g, useSin ? '× sin(2π·f·t)' : '× cos(2π·f·t)', X0 + 130, Y - 112, useSin ? COL.i : COL.c, 26); text(g, '= součin', X0 + 360, Y - 112, COL.z, 26);
+      text(g, 'f = měřená frekvence, referenci počítá MCU', X0, Y + 160, COL.dim, 26);
+      // the running average: a bar that settles on the component
+      const avg = n ? sum / n : 0, bx = 900, by = Y;
+      g.strokeStyle = COL.axis; g.lineWidth = 2; g.beginPath(); g.moveTo(bx - 50, by); g.lineTo(bx + 50, by); g.stroke();
+      g.fillStyle = useSin ? COL.i : COL.c; g.shadowColor = g.fillStyle; g.shadowBlur = 16; g.fillRect(bx - 34, Math.min(by, by - 2 * A * avg), 68, Math.abs(2 * A * avg)); g.shadowBlur = 0;
+      text(g, 'průměr', bx, by + 150, COL.txt, 26, 'center');
+      text(g, useSin ? 'Im' : 'Re', bx, by - 150, useSin ? COL.i : COL.c, 40, 'center', 700, 'Nunito');
+      if (st === 3) {   // keep the real part beside it
+        const re = .5 * Math.cos(ph0); g.fillStyle = COL.c; g.globalAlpha = .55 * a; g.fillRect(bx - 110, by - 2 * A * re, 40, 2 * A * re); g.globalAlpha = a;
+        text(g, 'Re', bx - 90, by - 150, COL.c, 32, 'center');
+      }
+      g.restore();
+    }
+  }
+});
+
+/* ================= sweep → pulse: example components (exact maths, not the project simulation) ================= */
+const DUTS = {
+  rlc: { name: 'sériový RLC', L: 10e-3, C: 1e-6, R: 20 },
+  c: { name: 'kondenzátor', C: 1e-6 },
+  l: { name: 'cívka', L: 10e-3, R: 20 },
+};
+let DUT_KEY = 'rlc';
+const zOf = (d, f) => { const w = 2 * Math.PI * f; return [d.R || 0, (d.L ? w * d.L : 0) - (d.C ? 1 / (w * d.C) : 0)]; };
+const zAbs = f => Math.hypot(...zOf(DUTS[DUT_KEY], f));
+const SWEEP_F = Array.from({ length: 30 }, (_, k) => 20 * Math.pow(5000, k / 29));
+function bodeAxes(g, X0, Y0, W, H) {
+  const fx = f => X0 + W * (Math.log10(f) - 1) / (Math.log10(2e5) - 1), zy = z => Y0 + H - H * clamp(Math.log10(z) / 5, -.05, 1.05);
+  grid(g, X0, Y0, W, H, 4, 5, .9);
+  for (const [f, s] of [[100, '100 Hz'], [1e3, '1 kHz'], [1e4, '10 kHz'], [1e5, '100 kHz']]) text(g, s, fx(f), Y0 + H + 28, COL.dim, 26, 'center');
+  for (const [z, s] of [[10, '10 Ω'], [1e3, '1 kΩ'], [1e5, '100 kΩ']]) text(g, s, X0 - 12, zy(z), COL.dim, 26, 'right');
+  text(g, '|Z|', X0 + 10, Y0 + 24, COL.z, 32);
+  return { fx, zy };
+}
+function bodeCurve(g, ax, alpha = .5) { const pts = []; for (let e = 1; e <= 5.3; e += .01) { const f = Math.pow(10, e); pts.push([ax.fx(f), ax.zy(zAbs(f))]); } glowLine(g, pts, COL.dim, 3, 4, alpha); }
+/* a small card with the schematic of the component being measured */
+function dutCard(g, x, y) {
+  const d = DUTS[DUT_KEY], parts = [];
+  if (d.R) parts.push(['R', `${d.R} Ω`]); if (d.L) parts.push(['L', `${d.L * 1e3} mH`]); if (d.C) parts.push(['C', `${d.C * 1e6} µF`]);
+  const w = 90 + parts.length * 110, h = 130;
+  g.save(); g.fillStyle = 'rgba(8,17,13,.94)'; g.strokeStyle = COL.z; g.lineWidth = 2; g.beginPath(); g.roundRect(x - w, y, w, h, 14); g.fill(); g.stroke(); g.restore();
+  text(g, d.name, x - w / 2, y + 26, COL.z, 26, 'center');
+  let cx = x - w + 30; const cy = y + 70;
+  glowLine(g, [[cx, cy], [cx + 15, cy]], COL.dim, 3, 3); cx += 15;
+  for (const [t, v] of parts) {
+    if (t === 'R') resistor(g, cx, cy, cx + 80, cy, COL.c, 1, 3);
+    if (t === 'L') { g.save(); g.strokeStyle = COL.u; g.lineWidth = 3; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + 8, cy); for (let k = 0; k < 4; k++) g.arc(cx + 18 + k * 16, cy, 8, Math.PI, 0); g.lineTo(cx + 80, cy); g.stroke(); g.restore(); }
+    if (t === 'C') { glowLine(g, [[cx, cy], [cx + 34, cy]], COL.dim, 3, 3); glowLine(g, [[cx + 46, cy], [cx + 80, cy]], COL.dim, 3, 3); g.save(); g.strokeStyle = COL.i; g.lineWidth = 5; g.beginPath(); g.moveTo(cx + 34, cy - 20); g.lineTo(cx + 34, cy + 20); g.moveTo(cx + 46, cy - 20); g.lineTo(cx + 46, cy + 20); g.stroke(); g.restore(); }
+    text(g, v, cx + 40, cy + 40, COL.txt, 26, 'center');
+    cx += 80;
+    glowLine(g, [[cx, cy], [cx + 30, cy]], COL.dim, 3, 3); cx += 30;
+  }
+}
+const dutButtons = { button(S, b) { DUT_KEY = b.dataset.dut; S.ts = 0; }, buttonOn: (S, b) => b.dataset.dut === DUT_KEY, reset(S) { S.syncButtons && S.syncButtons(); }, onStep(S) { S.syncButtons && S.syncButtons(); } };
+document.querySelectorAll('[data-dut]').forEach(b => b.addEventListener('click', () => document.querySelectorAll('[data-dut]').forEach(x => x.classList.toggle('on', x.dataset.dut === DUT_KEY))));
+
+scene('sweep', Object.assign({
+  steps: 2,
+  draw(g, S) {
+    const ts = S.ts, st = S.step, d = DUTS[DUT_KEY];
+    const ax = bodeAxes(g, 140, 300, 880, 300);
+    const per = .32, n = st === 0 ? Math.min(30, Math.floor(ts / per) + 1) : 30, k = n - 1, f = SWEEP_F[k];
+    for (let q = 0; q < n; q++) dot(g, ax.fx(SWEEP_F[q]), ax.zy(zAbs(SWEEP_F[q])), 8, COL.u, 14);
+    if (st === 1) bodeCurve(g, ax, P(ts, 0, 1) * .6);
+    // the sine being applied now, and the current: amplitude falls with |Z| (log scale), phase from Z
+    const [zr, zi] = zOf(d, f), ph = Math.atan2(zi, zr), ampI = .2 + .7 * clamp((4 - Math.log10(zAbs(f))) / 3);
+    grid(g, 140, 40, 880, 200, 8, 4, .7);
+    const u = [], i = [];
+    for (let x = 0; x <= 880; x += 4) { const a = x / 880 * 6 * Math.PI - S.t * 6; u.push([140 + x, 140 - 80 * Math.sin(a)]); i.push([140 + x, 140 - 80 * ampI * Math.sin(a - ph)]); }
+    glowLine(g, u, COL.u, 4, 10); glowLine(g, i, COL.i, 4, 10);
+    text(g, `f = ${f < 1e3 ? Math.round(f) + ' Hz' : fmtCz(f / 1e3, 1) + ' kHz'}`, 160, 66, COL.z, 40, 'left', 800, 'Nunito');
+    text(g, `měření ${n} / 30`, 160, 270, COL.txt, 26, 'left');
+    dot(g, ax.fx(f), ax.zy(zAbs(f)), 14, COL.z, 26, st === 0 ? .9 : 0);
+    dutCard(g, 1050, 24);
+  }
+}, dutButtons));
+
+scene('sum', {
+  steps: 3,
+  draw(g, S) {
+    const st = S.step, ts = S.ts, X0 = 60, XW = 960;
+    const N = st === 0 ? 4 : st === 1 ? Math.max(1, Math.min(60, Math.round(1 + Math.pow(P(ts, .3, 5), 1.6) * 59))) : 60;
+    const wave = (k, x) => Math.cos(2 * Math.PI * k * (x - .5));      // harmonic k, all in phase at the centre
+    if (st === 0) {
+      for (let k = 1; k <= 4; k++) {
+        const y0 = 70 + (k - 1) * 120, pts = [];
+        for (let x = 0; x <= 1; x += .002) pts.push([X0 + XW * x, y0 - 38 * wave(k, x)]);
+        glowLine(g, pts, COL.c, 3, 8, P(ts, (k - 1) * .3, .6));
+        g.save(); g.globalAlpha = P(ts, (k - 1) * .3, .6); text(g, `${k}·f`, X0 + XW + 10, y0, COL.dim, 26); g.restore();
+      }
+      dashed(g, X0 + XW / 2, 30, X0 + XW / 2, 520, COL.z, .4);
+    } else {
+      const pts = [], Y = 330;
+      for (let x = 0; x <= 1; x += .001) { let s = 0; for (let k = 1; k <= N; k++) s += wave(k, x); pts.push([X0 + XW * x, Y - 250 * s / Math.sqrt(60 * N)]); }
+      grid(g, X0, Y - 270, XW, 360, 8, 4, .7);
+      glowLine(g, pts, COL.u, 4, 14);
+      text(g, `součet ${N} frekvencí`, X0 + 10, 40, COL.u, 40, 'left', 800, 'Nunito');
+    }
+    // spectrum: N equal bars
+    const SB = 680, SH = 90, nb = 60, bw = XW / nb;
+    g.strokeStyle = COL.axis; g.lineWidth = 2; g.beginPath(); g.moveTo(X0, SB); g.lineTo(X0 + XW, SB); g.stroke();
+    for (let b = 0; b < Math.min(nb, N); b++) { g.fillStyle = st === 2 ? COL.u : COL.c; g.globalAlpha = .85; g.fillRect(X0 + b * bw + 3, SB - SH, bw - 6, SH); }
+    g.globalAlpha = 1; text(g, 'spektrum: stejné amplitudy, frekvence →', X0, SB + 26, COL.dim, 26);
+  }
+});
+
+/* the pulse response of each component: smooth 1 V pulse (Gaussian, ~10 µs wide), current by RK4 (or i = C du/dt) */
+const PULSE = (() => { const s = 3e-6, t0 = 15e-6; return { u: t => Math.exp(-((t - t0) ** 2) / (2 * s * s)), du: t => -(t - t0) / (s * s) * Math.exp(-((t - t0) ** 2) / (2 * s * s)) }; })();
+const RESP_CACHE = {};
+function respOf(key) {
+  if (RESP_CACHE[key]) return RESP_CACHE[key];
+  const d = DUTS[key], dt = 2e-6, N = 4096, u = new Float64Array(N), i = new Float64Array(N);
+  for (let n = 0; n < N; n++) u[n] = PULSE.u(n * dt);
+  if (!d.L) { for (let n = 0; n < N; n++) i[n] = d.C * PULSE.du(n * dt); }
+  else {
+    let I = 0, Q = 0;                                  // L dI/dt = u - R I - Q / C,  dQ/dt = I
+    const fn = (t, I, Q) => [(PULSE.u(t) - (d.R || 0) * I - (d.C ? Q / d.C : 0)) / d.L, I];
+    for (let n = 0; n < N; n++) {
+      i[n] = I; const t = n * dt;
+      const k1 = fn(t, I, Q), k2 = fn(t + dt / 2, I + dt / 2 * k1[0], Q + dt / 2 * k1[1]), k3 = fn(t + dt / 2, I + dt / 2 * k2[0], Q + dt / 2 * k2[1]), k4 = fn(t + dt, I + dt * k3[0], Q + dt * k3[1]);
+      I += dt / 6 * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]); Q += dt / 6 * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+    }
+  }
+  const df = 1 / (N * dt), bins = [], seen = new Set();
+  for (let q = 0; q < 40; q++) { const k = Math.round(Math.pow(400, q / 39)); if (!seen.has(k)) { seen.add(k); bins.push(k); } }
+  const dft = (x, k) => { let re = 0, im = 0; for (let n = 0; n < N; n++) { const a = 2 * Math.PI * k * n / N; re += x[n] * Math.cos(a); im -= x[n] * Math.sin(a); } return [re, im]; };
+  const pts = bins.map(k => { const U = dft(u, k), Ic = dft(i, k), q = Ic[0] ** 2 + Ic[1] ** 2; return { f: k * df, U: Math.hypot(...U), I: Math.hypot(...Ic), z: Math.hypot((U[0] * Ic[0] + U[1] * Ic[1]) / q, (U[1] * Ic[0] - U[0] * Ic[1]) / q) }; });
+  return (RESP_CACHE[key] = { u, i, dt, N, pts });
+}
+const RESP = respOf('rlc');
+
+scene('resp', Object.assign({
+  steps: 3,
+  draw(g, S) {
+    const st = S.step, ts = S.ts, R = respOf(DUT_KEY), X0 = 140, XW = 880;
+    if (st === 0) {
+      const span = DUT_KEY === 'c' ? 60e-6 : 3e-3, n3 = Math.floor(span / R.dt), k1 = Math.floor(n3 * P(ts, .4, 3.5)), imax = Math.max(...Array.from(R.i.slice(0, n3), Math.abs)) || 1;
+      grid(g, X0, 60, XW, 260, 8, 4, .8); grid(g, X0, 380, XW, 260, 8, 4, .8);
+      const up = [], ip = [];
+      for (let n = 0; n <= k1; n++) { up.push([X0 + XW * n / n3, 300 - 220 * R.u[n]]); ip.push([X0 + XW * n / n3, 510 - 110 * R.i[n] / imax]); }
+      glowLine(g, up, COL.u, 4, 14); glowLine(g, ip, COL.i, 4, 14);
+      text(g, 'U: impuls ~10 µs', X0 + 20, 340, COL.u, 32); text(g, 'I: odezva', X0 + XW - 10, 410, COL.i, 32, 'right');
+      text(g, (DUT_KEY === 'c' ? '60 µs' : '3 ms') + ' →', X0 + XW, 670, COL.dim, 26, 'right');
+    } else {
+      const ax = bodeAxes(g, X0, 300, XW, 340);
+      const a1 = st === 1 ? P(ts, .2, 1.4) : 1, um = Math.max(...R.pts.map(p => p.U)), im = Math.max(...R.pts.map(p => p.I));
+      R.pts.forEach(p => {
+        const x = ax.fx(p.f);
+        g.fillStyle = COL.u; g.globalAlpha = .8; g.fillRect(x - 7, 240 - 170 * a1 * p.U / um, 6, 170 * a1 * p.U / um);
+        g.fillStyle = COL.i; g.fillRect(x + 1, 240 - 170 * a1 * p.I / im, 6, 170 * a1 * p.I / im);
+      });
+      g.globalAlpha = 1; text(g, 'U(f)', X0 + 10, 50, COL.u, 32); text(g, 'I(f)', X0 + 110, 50, COL.i, 32);
+      g.strokeStyle = COL.axis; g.lineWidth = 2; g.beginPath(); g.moveTo(X0, 240); g.lineTo(X0 + XW, 240); g.stroke();
+      if (st === 2) {
+        bodeCurve(g, ax, .6);
+        const a2 = P(ts, .3, .9);
+        R.pts.forEach(p => dot(g, ax.fx(p.f), ax.zy(p.z), 8, COL.z, 18, a2));
+        g.save(); g.globalAlpha = a2; text(g, 'Z = U / I', X0 + XW / 2, 330, COL.z, 40, 'center', 800, 'Nunito'); text(g, '— křivka z rozmítání', X0 + XW / 2, 375, COL.dim, 26, 'center'); g.restore();
+      }
+    }
+    dutCard(g, 1050, 24);
+  }
+}, dutButtons));
+
+/* ================= 5 · from a pulse to an MLS: shift register at work, then the real spectrum ================= */
+const MLS = (() => { const st = Array(9).fill(1), out = []; for (let i = 0; i < 511; i++) { out.push(st[8]); const fb = st[8] ^ st[4]; st.unshift(fb); st.pop(); } return out; })();
+const MLS_SPEC = (() => {   // |DFT| of one period of the ±1 sequence, bins 1..255
+  const N = 511, x = MLS.map(b => b ? 1 : -1), m = [];
+  for (let k = 1; k <= 255; k++) { let re = 0, im = 0; for (let n = 0; n < N; n++) { re += x[n] * Math.cos(2 * Math.PI * k * n / N); im -= x[n] * Math.sin(2 * Math.PI * k * n / N); } m.push(Math.hypot(re, im)); }
+  return m;
+})();
+scene('mls', {
+  steps: 3,
+  // the waveform starts with the 48 bits that precede the all-ones state, so the picture is full from the start
+  state: () => ({ reg: Array(9).fill(1), shift: 0, bits: MLS.slice(511 - 48), timer: 0 }),
+  reset(S) { S.reg = Array(9).fill(1); S.bits = MLS.slice(511 - 48); S.timer = 0; S.shift = 0; },
+  draw(g, S, dt) {
+    const st = S.step, ts = S.ts;
+    // top: the signal in time
+    const TX = 70, TW = 950, TY = 130, TA = 62;
+    grid(g, TX, TY - 90, TW, 180, 12, 4, .9);
+    g.strokeStyle = COL.axis; g.lineWidth = 2; g.beginPath(); g.moveTo(TX, TY); g.lineTo(TX + TW, TY); g.stroke();
+    if (st === 0) {
+      const a = P(ts, .2, 1), xp = TX + TW * .45;
+      glowLine(g, [[TX, TY], [xp, TY], [xp, TY - TA * 1.25 * a], [xp + 22, TY - TA * 1.25 * a], [xp + 22, TY], [TX + TW, TY]], COL.u, 5, 16);
+      text(g, 'impuls 1 V', xp + 40, TY - 80, COL.u, 32);
+    } else {
+      // shift register: one shift every 0.32 s, the output bit is appended to the waveform
+      if (st >= 1) {
+        S.timer += dt; const per = st === 1 ? .32 : .08;
+        while (S.timer > per) { S.timer -= per; const out = S.reg[8], fb = S.reg[8] ^ S.reg[4]; S.reg.unshift(fb); S.reg.pop(); S.bits.push(out); if (S.bits.length > 48) S.bits.shift(); S.shift = 0; }
+        S.shift = S.timer / per;
+      }
+      const bw = TW / 48, pts = [];
+      S.bits.forEach((b, k) => { const x = TX + TW - (S.bits.length - k) * bw - S.shift * bw, y = TY - (b ? TA : -TA); pts.push([Math.max(TX, x), y], [Math.max(TX, x + bw), y]); });
+      glowLine(g, pts, COL.u, 4, 12);
+      text(g, '+1', TX - 30, TY - TA, COL.dim, 26, 'center'); text(g, '−1', TX - 30, TY + TA, COL.dim, 26, 'center');
+      // the register
+      const RX = 150, RY = 400, cw = 78;
+      for (let k = 0; k < 9; k++) {
+        const x = RX + k * (cw + 10), tap = k === 4 || k === 8;
+        box(g, x, RY - 34, cw, 68, tap ? COL.i : COL.u, String(S.reg[k]), 1, tap ? 'rgba(255,196,125,.08)' : 'rgba(79,227,160,.06)', 40);
+        text(g, String(k + 1), x + cw / 2, RY + 56, COL.dim, 26, 'center');
+      }
+      const xorX = RX + 4 * (cw + 10) + cw / 2, xEnd = RX + 8 * (cw + 10) + cw / 2, xorY = RY - 110;
+      glowLine(g, [[xEnd, RY - 34], [xEnd, xorY], [xorX + 34, xorY]], COL.i, 3, 6, .8); glowLine(g, [[xorX, RY - 34], [xorX, xorY + 30]], COL.i, 3, 6, .8);
+      g.save(); g.strokeStyle = COL.i; g.lineWidth = 3; g.beginPath(); g.arc(xorX, xorY, 30, 0, 7); g.moveTo(xorX - 30, xorY); g.lineTo(xorX + 30, xorY); g.moveTo(xorX, xorY - 30); g.lineTo(xorX, xorY + 30); g.stroke(); g.restore();
+      glowLine(g, [[xorX - 30, xorY], [RX + cw / 2, xorY], [RX + cw / 2, RY - 34]], COL.i, 3, 6, .8);
+      text(g, 'XOR', xorX - 120, xorY - 24, COL.i, 26, 'center');
+      const [px, py] = polyAt([[xEnd, RY - 34], [xEnd, xorY], [xorX, xorY], [RX + cw / 2, xorY], [RX + cw / 2, RY - 34]], S.shift);
+      dot(g, px, py, 8, COL.i, 16);
+      glowLine(g, [[xEnd + cw / 2, RY], [xEnd + cw / 2 + 50, RY], [xEnd + cw / 2 + 50, TY + 90]], COL.u, 3, 6, .8);
+      text(g, 'výstup', xEnd + cw / 2 + 60, RY + 40, COL.u, 26, 'center');
+    }
+    // bottom: spectrum, both on the same scale (|DFT| of one period)
+    const SX = 70, SW = 950, SB = 660, SH = 135, mx = Math.sqrt(512);
+    g.strokeStyle = COL.axis; g.lineWidth = 2; g.beginPath(); g.moveTo(SX, SB); g.lineTo(SX + SW, SB); g.stroke();
+    text(g, 'spektrum, frekvence →', SX, SB + 30, COL.dim, 26, 'left');
+    const nb = 64, bw = SW / nb;
+    const showM = st >= 2 ? P(ts + (st > 2 ? 9 : 0), .2, 1.6) : 0;
+    for (let b = 0; b < nb; b++) {
+      const k = b * 4, h = SH / mx;                                     // a single 1 V pulse: |X| = 1 in every bin
+      if (showM > 0) { const hm = SH * MLS_SPEC[k] / mx * clamp(showM * 1.4 - b / nb * .4); g.fillStyle = COL.u; g.shadowColor = COL.u; g.shadowBlur = 10; g.globalAlpha = .75; g.fillRect(SX + b * bw + 3, SB - hm, bw - 6, hm); g.shadowBlur = 0; }
+      g.fillStyle = COL.i; g.globalAlpha = 1; g.fillRect(SX + b * bw + 3, SB - h, bw - 6, h);
+    }
+    g.globalAlpha = 1;
+    text(g, 'impuls', SX + 10, SB - SH / mx - 24, COL.i, 26);
+    if (showM > .3) { text(g, 'MLS', SX + 10, SB - SH - 26, COL.u, 32); text(g, '+27 dB', SX + SW - 10, SB - SH - 26, COL.u, 40, 'right', 700, 'Nunito'); }
+  }
+});
+
+/* ================= why a single pulse fails here: amplitude and width limits, energy, averaging time ================= */
+scene('why', {
+  steps: 3,
+  draw(g, S) {
+    const st = S.step, ts = S.ts, X0 = 80, XW = 940, nb = 40, bw = XW / nb, Vmax = .7;
+    const lane = (y0, label, col, fill) => {      // a 40-bit window of the source around mid-rail, ±0.6 V ceiling
+      const vy = v => y0 - 110 * v / Vmax;
+      grid(g, X0, y0 - 140, XW, 280, 10, 4, .7);
+      for (const v of [Vmax, -Vmax]) { glowLine(g, [[X0, vy(v)], [X0 + XW, vy(v)]], COL.r, 2, 6, .8); }
+      text(g, '≈ +0,7 V', X0 + XW - 6, vy(Vmax) - 18, COL.r, 26, 'right'); text(g, '≈ −0,7 V', X0 + XW - 6, vy(-Vmax) + 18, COL.r, 26, 'right');
+      text(g, label, X0 + 6, y0 - 118, col, 32);
+      return vy;
+    };
+    // top: one pulse, its height grows until it hits the ceiling; the area (energy) is shaded
+    const vy1 = lane(180, 'impuls (1 bit z 511)', COL.i), h = Math.min(1, P(ts + (st > 0 ? 9 : 0), .3, 1.4) * 1.35) * Vmax;
+    const px = X0 + XW / 2;
+    g.fillStyle = 'rgba(255,196,125,.35)'; g.fillRect(px, vy1(h), bw, vy1(0) - vy1(h));
+    glowLine(g, [[X0, vy1(0)], [px, vy1(0)], [px, vy1(h)], [px + bw, vy1(h)], [px + bw, vy1(0)], [X0 + XW, vy1(0)]], COL.i, 4, 12);
+    if (st === 0 && P(ts, 1.5, .5) > 0) { g.save(); g.globalAlpha = P(ts, 1.5, .5); text(g, '← 4,7 µs →', px + bw / 2, vy1(0) + 40, COL.i, 26, 'center'); g.restore(); }
+    // bottom: the MLS window, full amplitude all the time
+    if (st >= 1) {
+      const a = st === 1 ? P(ts, 0, 1.2) : 1, vy2 = lane(500, 'pseudonáhodná sekvence', COL.u), seq = MLS.slice(0, nb), pts = [];
+      g.save(); g.globalAlpha = a;
+      seq.forEach((b, k) => { const v = (b ? 1 : -1) * Vmax, x = X0 + k * bw; g.fillStyle = 'rgba(79,227,160,.28)'; g.fillRect(x, Math.min(vy2(v), vy2(0)), bw, Math.abs(vy2(v) - vy2(0))); pts.push([x, vy2(v)], [x + bw, vy2(v)]); });
+      glowLine(g, pts, COL.u, 4, 12);
+      g.restore();
+    }
+    // averaging time for the same accuracy: every pass would need 511 x more periods
+    if (st === 2) {
+      const a = P(ts, 0, .8);
+      g.save(); g.globalAlpha = a; g.fillStyle = 'rgba(8,17,13,.93)'; g.fillRect(X0 - 20, 360, XW + 40, 330); g.restore();
+      const ps = D.design.passes, per = p => 511 / p.bit_rate;
+      const tM = ps.reduce((s, p) => s + (p.avg + 1) * per(p), 0), tP = ps.reduce((s, p) => s + (p.avg * 511 + 1) * per(p), 0);
+      const sc = (XW - 440) / Math.log10(tP / .05), bar = t => sc * Math.log10(t / .05) * P(ts, .3, 1.5);
+      g.save(); g.globalAlpha = a;
+      text(g, 'čas na jeden rozsah, stejná přesnost', X0, 400, COL.txt, 32);
+      g.fillStyle = COL.u; g.fillRect(X0 + 260, 455, bar(tM), 50); text(g, 'sekvence', X0 + 240, 480, COL.u, 32, 'right');
+      text(g, `${fmtCz(tM, 1)} s`, X0 + 275 + bar(tM), 480, COL.txt, 32);
+      g.fillStyle = COL.i; g.fillRect(X0 + 260, 555, bar(tP), 50); text(g, 'impuls', X0 + 240, 580, COL.i, 32, 'right');
+      text(g, `${Math.round(tP / 60)} min`, X0 + 275 + bar(tP), 580, COL.txt, 32);
+      text(g, 'logaritmická osa', X0 + XW, 660, COL.dim, 26, 'right');
+      g.restore();
+    }
+  }
+});
+
+/* ================= 7 · the input block: signals travel through it, step by step ================= */
+scene('block', {
+  steps: 5,
+  draw(g, S) {
+    const st = S.step, ts = S.ts, t = S.t;
+    const act = s => st === s ? P(ts, 0, .7) : (st > s ? 1 : 0), on = s => (st >= s ? 1 : .22);
+    const rr = D.design;
+    // range cycling on step 3: which pair is active
+    const rng = st === 3 ? Math.floor(Math.max(0, ts - .4) / 1.6) % 3 : 0;
+    const pins = [['PB3', 'PB4'], ['PB5', 'PB6'], ['PB7', 'PB8']][rng];
+    const Ax = 400, Ay = 230, Mx = 480, My = 470;
+    // inside-MCU frame
+    g.save(); g.globalAlpha = .9 * on(2); g.setLineDash([10, 10]); g.strokeStyle = COL.dim; g.lineWidth = 2; g.strokeRect(575, 40, 590, 640); g.restore();
+    text(g, 'uvnitř CH32V303', 870, 690, COL.dim, 26, 'center');
+    // sources
+    const sq = (x, y, inv) => { const pts = []; for (let k = 0; k <= 6; k++) { const hi = ((Math.floor(t * 2.2) + k) % 2 === 0) !== inv; pts.push([x + k * 12, y + (hi ? -12 : 12)], [x + k * 12 + 12, y + (hi ? -12 : 12)]); } glowLine(g, pts, COL.i, 3, 8, on(0)); };
+    box(g, 40, 120, 120, 80, COL.i, pins[0], on(0)); box(g, 40, 260, 120, 80, COL.i, pins[1], on(0));
+    sq(52, 100, false); sq(52, 240, true);
+    const pA = [[160, 160], [210, 160]], pB = [[160, 300], [210, 300]];
+    glowLine(g, pA, COL.dim, 4, 4, on(0)); glowLine(g, pB, COL.dim, 4, 4, on(0));
+    resistor(g, 210, 160, 330, 160, COL.c, on(0)); resistor(g, 210, 300, 330, 300, COL.c, on(0));
+    text(g, `R_{a} ${fmtOhm(rr.ra[rng])}`, 270, 118, COL.c, 26, 'center', 700); text(g, `R_{b} ${fmtOhm(rr.rb[rng])}`, 270, 258, COL.c, 26, 'center', 700);
+    glowLine(g, [[330, 160], [Ax, 160], [Ax, Ay]], COL.dim, 4, 4, on(0)); glowLine(g, [[330, 300], [Ax, 300], [Ax, Ay]], COL.dim, 4, 4, on(0));
+    dot(g, Ax, Ay, 10, COL.u, 16, on(0)); text(g, 'A', Ax - 30, Ay, COL.u, 40, 'center', 700, 'Nunito');
+    if (st === 0) { flow(g, [[160, 160], [Ax, 160], [Ax, Ay]], t, COL.i, 3, .6); flow(g, [[160, 300], [Ax, 300], [Ax, Ay]], t + .5, COL.i, 3, .6); }
+    if (st === 3) {
+      g.save(); g.globalAlpha = P(ts, 0, .5);
+      text(g, `Rref = ${fmtOhm(rr.rref[rng])}`, 40, 48, COL.c, 40, 'left', 700, 'Nunito');
+      text(g, 'ostatní piny: Hi-Z', 330, 50, COL.dim, 26, 'left'); g.restore();
+    }
+    // DUT and M
+    glowLine(g, [[Ax, Ay], [Mx, Ay], [Mx, 290]], COL.dim, 4, 4, on(1)); box(g, Mx - 40, 290, 80, 110, COL.u, 'Z', on(1)); glowLine(g, [[Mx, 400], [Mx, My]], COL.dim, 4, 4, on(1));
+    dot(g, Mx, My, 10, COL.c, 16, on(1)); text(g, 'M', Mx + 32, My + 4, COL.c, 40, 'center', 700, 'Nunito');
+    glowLine(g, [[Mx, My], [250, My]], COL.dim, 4, 4, on(1));
+    resistor(g, 250, My, 250, 390, COL.c, on(1)); text(g, 'VDD', 250, 372, COL.dim, 26, 'center');
+    resistor(g, 250, My, 250, 600, COL.c, on(1));
+    glowLine(g, [[360, My], [360, 525]], COL.dim, 4, 4, on(1)); g.save(); g.globalAlpha = on(1); g.strokeStyle = COL.c; g.lineWidth = 5; g.beginPath(); g.moveTo(335, 525); g.lineTo(385, 525); g.moveTo(335, 540); g.lineTo(385, 540); g.stroke(); g.restore();
+    glowLine(g, [[360, 540], [360, 600]], COL.dim, 4, 4, on(1)); glowLine(g, [[230, 600], [380, 600]], COL.dim, 4, 4, on(1)); text(g, 'GND', 305, 630, COL.dim, 26, 'center');
+    text(g, '10k / 10k', 130, My - 18, COL.dim, 26, 'center'); text(g, '+ 47 µF', 130, My + 18, COL.dim, 26, 'center');
+    if (st === 1) flow(g, [[Ax, Ay], [Mx, Ay], [Mx, My], [360, My], [360, 525]], t, COL.i, 4, .5);
+    // the two sense chains
+    const chain = (y0, from, labelA, labelB, adc, col) => {
+      glowLine(g, from, COL.dim, 4, 4, on(2));
+      opamp(g, 600, y0, 70, col, on(2), labelA); glowLine(g, [[663, y0], [700, y0]], COL.dim, 4, 4, on(2));
+      box(g, 700, y0 - 40, 150, 80, col, '193 kHz', on(2), undefined, 26);
+      glowLine(g, [[850, y0], [880, y0]], COL.dim, 4, 4, on(2)); opamp(g, 880, y0, 70, col, on(2), labelB);
+      glowLine(g, [[943, y0], [990, y0]], COL.dim, 4, 4, on(2)); box(g, 990, y0 - 45, 150, 90, col, adc, on(2));
+      if (st === 2) flow(g, from.concat([[1000, y0]]), t, col, 4, .45);
+    };
+    chain(130, [[Ax, Ay], [Ax + 0, 130], [600, 130]], 'OPA1', 'OPA2', 'ADC1', COL.u);
+    chain(560, [[Mx, My], [Mx, 560], [600, 560]], 'OPA4', 'OPA3', 'ADC2', COL.c);
+    // the sample clock hits both converters at the same instant
+    const ck = 1065, cy = 345;
+    box(g, ck - 75, cy - 40, 150, 80, COL.z, '857 kS/s', on(2), 'rgba(245,240,230,.05)', 26);
+    glowLine(g, [[ck, cy - 40], [ck, 175]], COL.z, 3, 4, on(2) * .7); glowLine(g, [[ck, cy + 40], [ck, 515]], COL.z, 3, 4, on(2) * .7);
+    if (st >= 2) { const ph = (t * 1.6) % 1; const [x1, y1] = polyAt([[ck, cy - 40], [ck, 175]], ph), [x2, y2] = polyAt([[ck, cy + 40], [ck, 515]], ph); dot(g, x1, y1, 7, COL.z, 18); dot(g, x2, y2, 7, COL.z, 18); }
+    if (st === 4) {  // the formula's ingredients light up on the drawing
+      const a = P(ts, 0, .8), pulse = .6 + .4 * Math.sin(t * 5);
+      dot(g, Ax, Ay, 22, COL.u, 30, a * pulse * .6); dot(g, Mx, My, 22, COL.c, 30, a * pulse * .6);
+      g.save(); g.globalAlpha = a; text(g, 'V_{src}: bity × VDD', 40, 50, COL.i, 32, 'left'); g.restore();
+    }
+  }
+});
+
+/* ================= 8 · sampling on the bit clock, averaging periods, the three passes ================= */
+scene('avg', {
+  steps: 3,
+  state: () => ({ seed: 1 }),
+  draw(g, S) {
+    const st = S.step, ts = S.ts, A = D.adc, n = A.a.length, spb = A.spb;
+    const X0 = 60, XW = 960;
+    const lo = Math.min(...A.a) - .03, hi = Math.max(...A.a) + .03;
+    const xs = k => X0 + XW * (k + .5) / n;
+    if (st <= 1) {
+      // top: bits (source) and the sampled node A (ngspice + the ADC sample instants)
+      const Y0 = 70, YH = 220, yv = v => Y0 + YH * (hi - v) / (hi - lo);
+      grid(g, X0, Y0, XW, YH, 15, 4, .8);
+      const bitPts = []; A.bits.forEach((b, k) => { const x = X0 + XW * k / A.bits.length, y = Y0 + YH + 40 - (b ? 26 : 0); bitPts.push([x, y], [x + XW / A.bits.length, y]); });
+      glowLine(g, bitPts, COL.i, 3, 6, .8); text(g, 'bity', X0 - 10, Y0 + YH + 28, COL.i, 26, 'right');
+      const pts = A.a.map((v, k) => [xs(k), yv(v)]);
+      glowLine(g, pts, COL.u, 3, 8, .5);
+      const kk = st === 0 ? Math.floor(n * P(ts, .3, 3.5)) : n;
+      for (let k = 0; k < kk; k++) dot(g, xs(k), yv(A.a[k]), 4.5, COL.u, 8);
+      if (st === 0 && kk < n) { g.strokeStyle = COL.z; g.lineWidth = 2; g.beginPath(); g.moveTo(xs(kk), Y0); g.lineTo(xs(kk), Y0 + YH + 50); g.stroke(); }
+      text(g, 'ADC_{A}: 4 vzorky na bit', X0, Y0 - 34, COL.u, 26);
+    }
+    if (st === 1) {
+      // bottom: noisy periods (noise drawn 100× larger than the model's 1 LSB so it can be seen) summed into one
+      const Y0 = 420, YH = 240, yv = v => Y0 + YH * (hi - v) / (hi - lo), NZ = A.lsb_mV / 1000 * A.noise_lsb * 100;
+      grid(g, X0, Y0, XW, YH, 15, 4, .8);
+      const N = Math.min(64, 1 + Math.floor(Math.max(0, ts - .3) * 14));
+      let s = (Math.floor(S.t * 14) * 7919) % 2147483647;
+      const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+      const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+      const one = A.a.map((v, k) => [xs(k), yv(v + NZ * gauss())]);
+      glowLine(g, one, COL.r, 2, 4, .55);
+      const avg = A.a.map((v, k) => [xs(k), yv(v + NZ * gauss() / Math.sqrt(N))]);
+      glowLine(g, avg, COL.u, 4, 12);
+      text(g, `N = ${N}`, X0 + XW, Y0 - 30, COL.u, 40, 'right', 700, 'Nunito');
+      text(g, `šum ÷ √N = ÷ ${fmtCz(Math.sqrt(N), 1)}`, X0 + XW - 150, Y0 - 26, COL.txt, 26, 'right');
+      text(g, '— jedna perioda', X0, Y0 - 26, COL.r, 26); text(g, '— součet N period', X0 + 260, Y0 - 26, COL.u, 26);
+      text(g, 'šum zvětšen 100× pro názornost', X0, Y0 + YH + 30, COL.dim, 26);
+    }
+    if (st >= 2) {
+      // log frequency axis with the 30 measured points coloured by pass, and the time each pass takes
+      const a = st === 2 ? P(ts, 0, .8) : 1, fx = f => X0 + XW * (Math.log10(f) - 1) / (Math.log10(2e5) - 1), Y = 230;
+      const passes = D.design.passes, cols = { high: COL.u, mid: COL.c, low: COL.i };
+      const names = { high: 'rychlé', mid: 'střední', low: 'pomalé' };
+      g.save(); g.globalAlpha = a;
+      g.strokeStyle = COL.axis; g.lineWidth = 2; g.beginPath(); g.moveTo(X0, Y); g.lineTo(X0 + XW, Y); g.stroke();
+      for (const [f, s] of [[10, '10 Hz'], [100, '100 Hz'], [1e3, '1 kHz'], [1e4, '10 kHz'], [1e5, '100 kHz']]) { g.beginPath(); g.moveTo(fx(f), Y - 10); g.lineTo(fx(f), Y + 10); g.stroke(); text(g, s, fx(f), Y + 40, COL.dim, 26, 'center'); }
+      const pts = []; for (let q = 0; q < 30; q++) { const f = 20 * Math.pow(5000, q / 29); let p = passes.find(p => p.df <= f / 5) || passes[passes.length - 1]; if (f < passes[passes.length - 1].df * 5) p = passes[passes.length - 1]; pts.push([Math.max(1, Math.round(f / p.df)) * p.df, p.name]); }
+      pts.forEach(([f, name], q) => { const k = clamp((P(ts, .2, 2) * 30 - q) / 2); dot(g, fx(f), Y, 9, cols[name], 16, k); });
+      text(g, '30 frekvenčních bodů', X0, Y - 60, COL.txt, 32);
+      // timeline: (averaged + 1 settling) periods × period length, per pass
+      let y = 380; const tot = passes.reduce((s, p) => s + (p.avg + 1) * 511 / p.bit_rate, 0), sc = (XW - 260) / tot;
+      for (const p of [...passes].reverse()) {
+        const T = (p.avg + 1) * 511 / p.bit_rate, w = Math.max(6, T * sc * P(ts, .8, 1.6));
+        g.fillStyle = cols[p.name]; g.shadowColor = cols[p.name]; g.shadowBlur = 12; g.fillRect(X0 + 260, y - 22, w, 44); g.shadowBlur = 0;
+        text(g, `${names[p.name]}${p.decim > 1 ? ' ÷' + p.decim : ''}`, X0 + 240, y, cols[p.name], 26, 'right');
+        text(g, `${fmtCz(T, 2)} s`, X0 + 270 + w, y, COL.txt, 26);
+        y += 90;
+      }
+      text(g, `celkem ${fmtCz(tot, 1)} s na rozsah`, X0 + XW, 630, COL.txt, 32, 'right');
+      g.restore();
+    }
+  }
+});
+
+/* ================= 9 · calibration: raw readings move onto the diagonal; the simulated accuracy bands ================= */
+scene('cal', {
+  steps: 3,
+  draw(g, S) {
+    const st = S.step, ts = S.ts, C = D.cal, pts = C.points;
+    const X0 = 130, Y0 = 70, WW = 520, HH = 500, lmin = 1, lmax = 6;
+    const lx = v => X0 + WW * (Math.log10(v) - lmin) / (lmax - lmin), ly = v => Y0 + HH - HH * (Math.log10(v) - lmin) / (lmax - lmin);
+    grid(g, X0, Y0, WW, HH, 5, 5, .9);
+    dashed(g, lx(10), ly(10), lx(1e6), ly(1e6), COL.z, .5, 2);
+    for (let e = 1; e <= 6; e++) { text(g, ['10', '100', '1k', '10k', '100k', '1M'][e - 1], lx(Math.pow(10, e)), Y0 + HH + 30, COL.dim, 26, 'center'); text(g, ['10', '100', '1k', '10k', '100k', '1M'][e - 1], X0 - 14, ly(Math.pow(10, e)), COL.dim, 26, 'right'); }
+    text(g, 'skutečná |Z| [Ω] →', X0 + WW, Y0 + HH + 70, COL.dim, 26, 'right');
+    text(g, '↑ naměřená', 20, Y0 - 16, COL.dim, 26, 'left');
+    const mv = st === 0 ? 0 : (st === 1 ? P(ts, 1.2, 1.8) : 1);
+    pts.forEach((p, q) => {
+      const app = st === 0 ? clamp((P(ts, .2, 2.2) * pts.length - q) / 1.5) : 1;
+      const y = Math.pow(10, lerp(Math.log10(p.raw), Math.log10(p.cal), mv));
+      dot(g, lx(p.true), ly(y), 9, mv > .5 ? COL.u : COL.i, 16, app);
+    });
+    if (st === 0 && P(ts, 2, .6) > 0) { const p = pts[pts.length - 1]; g.save(); g.globalAlpha = P(ts, 2, .6); text(g, `${fmtOhm(p.true)} → ${fmtOhm(p.raw)}`, lx(p.true) - 20, ly(p.raw) + 50, COL.i, 32, 'right'); g.restore(); }
+    if (st >= 1) {
+      const a = st === 1 ? P(ts, 0, .8) : 1;
+      g.save(); g.globalAlpha = a;
+      for (const [v, s] of [[C.rref, 'Rref'], [4 * C.rref, '4·Rref']]) { g.strokeStyle = COL.z; g.lineWidth = 3; g.beginPath(); g.arc(lx(v), ly(v), 20, 0, 7); g.stroke(); text(g, s, lx(v) + 28, ly(v) + 30, COL.z, 26); }
+      text(g, 'zkrat', X0 + 10, Y0 + HH - 24, COL.z, 26);
+      text(g, `f = ${fmtCz(C.f / 1000, 1)} kHz, rozsah R2`, X0 + 10, Y0 + 24, COL.dim, 26);
+      g.restore();
+    }
+    if (st >= 2) {
+      // simulated accuracy bands per range on a log axis
+      const a = P(ts + (st > 2 ? 9 : 0), 0, 1.5), BX = 770, BY = 80, BH = 540, bmin = 0, bmax = 7, by = v => BY + BH - BH * (Math.log10(v) - bmin) / (bmax - bmin);
+      g.save(); g.globalAlpha = clamp(a * 3);
+      for (let e = 0; e <= 7; e++) { g.strokeStyle = COL.grid; g.lineWidth = 1.5; g.beginPath(); g.moveTo(BX - 10, by(Math.pow(10, e))); g.lineTo(BX + 290, by(Math.pow(10, e))); g.stroke(); text(g, ['1', '10', '100', '1k', '10k', '100k', '1M', '10M'][e], BX - 18, by(Math.pow(10, e)), COL.dim, 26, 'right'); }
+      ['R1', 'R2', 'R3'].forEach((r, q) => {
+        const b = D.results.best_band[r], re = D.results.reach[r], x = BX + 20 + q * 95, k = clamp(a * 1.4 - q * .2);
+        const mid = Math.log10(b.rref);
+        const sp = (lo, hi) => [Math.pow(10, lerp(mid, Math.log10(lo), k)), Math.pow(10, lerp(mid, Math.log10(hi), k))];
+        const [r0, r1] = sp(re.z_lo, re.z_hi), [b0, b1] = sp(b.z_lo, b.z_hi);
+        g.fillStyle = 'rgba(79,227,160,.22)'; g.fillRect(x, by(r1), 60, by(r0) - by(r1));
+        g.fillStyle = COL.u; g.shadowColor = COL.u; g.shadowBlur = 14; g.fillRect(x + 8, by(b1), 44, by(b0) - by(b1)); g.shadowBlur = 0;
+        text(g, r, x + 30, BY + BH + 30, COL.txt, 26, 'center');
+      });
+      text(g, 'plné 1 % a 1°', BX + 150, BY - 32, COL.u, 26, 'center'); text(g, 'světlé 10 %', BX + 150, BY - 2, COL.dim, 26, 'center');
+      g.restore();
+    }
+  }
+});
+
+</script>
+</body>
+</html>
