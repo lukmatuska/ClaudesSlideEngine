@@ -9,10 +9,11 @@
      appends its own section at the end; its slides set the theme's look by a class, its progress style by data-dots
      and its colour by data-accent.
      Single-file build: python ../../build.py deck.html -o showcase.html -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fredoka:wght@400..700&family=Nunito+Sans:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@800&family=Inter:wght@400;600;700&family=Fredoka:wght@400..700&family=Nunito+Sans:wght@400;600;700&display=swap">
 <link rel="stylesheet" href="../../engine.css">
 <script src="../../themes/pixelpine/theme.js" defer></script>
 <script src="../../themes/train/theme.js" defer></script>
+<script src="../../themes/scope/theme.js" defer></script>
 <script src="../../engine.js" defer></script>
 <style>
   /* neutral core look (info slides) */
@@ -54,6 +55,12 @@
   section.tr.dark .label { color: #cfc7b6; }
   section.tr .big { font-family: Fredoka, Arial, sans-serif; font-weight: 600; color: #b23a22; }
   section.tr .card { background: #fffcf6; border-color: #e2d9c6; }
+  section.sc { font-family: 'Nunito Sans', Arial, sans-serif; background: #f5f0e6; color: #16271f; }
+  section.sc.dark { background: #08110d; color: #f5f0e6; }
+  section.sc h1, section.sc h2 { font-family: Nunito, Arial, sans-serif; font-weight: 800; letter-spacing: 0; }
+  section.sc .kicker { color: #4fe3a0; }
+  section.sc .label { color: #3f5047; }
+  section.sc.dark .label { color: #9fbfae; }
 </style>
 </head>
 <body data-accent="#9fb3c8" data-lang="en">
@@ -285,6 +292,40 @@
     <p class="label">Came in with track (train). The loco uses data-fx="depart": it drives off and backs in every 14 s. Below: data-dots="track", the progress as a rail. A real talk with this theme: demo/Nudgy-demo.</p>
   </div>
   <aside>The last slide of the train section. depart is meant for the closing slide of a talk about a vehicle.</aside>
+</section>
+
+<!-- ================= theme: scope ================= -->
+
+<section data-accent="#4fe3a0" class="sc dark" data-enter="scope-sweep" data-ambient="scope-grid" style="justify-content:center">
+  <p class="kicker">Theme: scope</p>
+  <h1>Oscilloscope</h1>
+  <p style="color:#dcefe4">A beam that writes the next slide, a CRT switching off, phosphor traces, diagrams that draw themselves.</p>
+  <p class="label">Came in with scope-sweep: a glowing beam swept across and wrote this slide. data-ambient="scope-grid" behind it: a graticule with a voltage and a phase-shifted current trace.</p>
+  <aside>The scope theme was made for a talk about measuring impedance with a microcontroller. Everything glows in the accent colour; the screen colour of the ambient is data-scope-bg on the body.</aside>
+</section>
+
+<section data-accent="#4fe3a0" class="sc" data-enter="crt">
+  <h2>CRT off, CRT on</h2>
+  <p>The old slide collapsed into a bright line and a dot, like a tube switching off; this one opened out of the line.</p>
+  <p class="label">Came in with crt (scope).</p>
+  <aside>crt suits a change of section, or a cut between two very different slides.</aside>
+</section>
+
+<section data-accent="#4fe3a0" class="sc" data-enter="scope-sweep">
+  <h2>Diagrams that draw themselves</h2>
+  <svg data-fx="trace" width="1400" height="360" viewBox="0 0 1400 360">
+    <path d="M40 180 H260" fill="none" stroke="#2a9d6e" stroke-width="8"/>
+    <path d="M260 180 l20 -40 l40 80 l40 -80 l40 80 l40 -80 l20 40" fill="none" stroke="#2a7fb8" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M460 180 H640 V60 H1360" fill="none" stroke="#2a9d6e" stroke-width="8"/>
+    <rect x="600" y="200" width="80" height="120" rx="12" fill="#e6f6ec" stroke="#2a9d6e" stroke-width="6"/>
+    <path d="M640 180 V200" fill="none" stroke="#2a9d6e" stroke-width="8"/>
+    <path d="M760 200 C 840 40, 940 40, 1020 200 S 1200 360, 1340 200" fill="none" stroke="#c7801f" stroke-width="8"/>
+    <circle cx="640" cy="180" r="14" fill="#4fe3a0" stroke="#2a9d6e" stroke-width="5"/>
+    <text x="330" y="120" font-size="40" font-family="Nunito Sans" fill="#2a7fb8">Rref</text>
+    <text x="700" y="275" font-size="40" font-family="Nunito Sans" fill="#2a9d6e">Z</text>
+  </svg>
+  <p class="label">data-fx="trace" (scope) on an &lt;svg&gt;: every stroked path draws itself, fills and text fade in after. Came in with scope-sweep. A real talk with this theme and stepped process animations: demo/Impedance-demo.</p>
+  <aside>The last slide of the scope section. The Impedance demo also shows how to walk through a process step by step inside a slide; see the Process animations rows in RECIPES.md.</aside>
 </section>
 
 </body>

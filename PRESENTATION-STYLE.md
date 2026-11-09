@@ -33,7 +33,8 @@ rounds of changes. Workflow: `CLAUDE.md`; technical reference: `README.md`; work
 - Every deck gets its own theme built from the project's subject (CLAUDE.md, step 4), mixed with existing themes
   where they fit. With no theme the core look is neutral.
 - Before designing a slide, check `RECIPES.md` for how that kind of content was shown before.
-- Fonts: Fredoka for headings, Nunito Sans for text (or a pair that fits the project).
+- Fonts: Fredoka for headings, Nunito Sans for text (or a pair that fits the project). **Fredoka has no Czech
+  diacritics (ě, ř, č, ů fall back to another font): for Czech decks use Nunito 800 for headings.**
 - Accent colour = the project's own colour if it has one (`data-accent`).
 
 ## Practicalities
