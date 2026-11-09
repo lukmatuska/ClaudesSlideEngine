@@ -3,7 +3,8 @@
 **Live demos:** [showcase](https://machmar.github.io/ClaudesSlideEngine/demo/showcase/deck.html) (what it can do and
 how to control it) · [PixelPine](https://machmar.github.io/ClaudesSlideEngine/demo/PixelPine-demo/deck.html) (a real
 11-slide talk, LED theme, in Czech) · [Nudgy](https://machmar.github.io/ClaudesSlideEngine/demo/Nudgy-demo/deck.html)
-(a 12-slide talk about a toy locomotive, train theme, in Czech). Open in Firefox, Chrome or Edge, press → or scroll
+(a 12-slide talk about a toy locomotive, train theme, in Czech) · [Impedance](https://machmar.github.io/ClaudesSlideEngine/demo/Impedance-demo/deck.html)
+(a 14-slide talk on measuring impedance with stepped process animations, scope theme, in Czech). Open in Firefox, Chrome or Edge, press → or scroll
 the mouse wheel.
 
 > **This is meant for Claude, not really for people.** It is the toolkit Claude (Anthropic's AI assistant, here
@@ -61,6 +62,7 @@ scroll wheel, speaker notes and a talk timer. The core is neutral; **[themes](th
 | `demo/showcase/` | Demo deck: first the neutral core and the controls, then one section per theme. |
 | `demo/PixelPine-demo/` | A real talk built with the engine and the pixelpine theme (Czech, with pictures and clips). |
 | `demo/Nudgy-demo/` | A real talk built with the train theme (Czech; steps through a schematic inside one slide). |
+| `demo/Impedance-demo/` | A real talk built with the scope theme (Czech; every content slide is a canvas animation stepped with → / ←, real simulation data in `media/data.js`). |
 | `tools/test-harness.js` | Lets an automated browser step through animations frame by frame. |
 | `tools/check-deck.js` | Finds overflowing elements, stray font sizes, missing notes and repeated transitions. |
 | `tools/themes.py` | Checks every theme and regenerates the catalogue in `themes/README.md`. |
