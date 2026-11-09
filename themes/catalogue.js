@@ -62,6 +62,33 @@ window.SE_CATALOGUE = {
    }
   },
   {
+   "name": "pmic",
+   "title": "PMIC (power rails)",
+   "description": "Power-management look: PWM pulse-train and power-up-sequence wipes, a converter-ringing settle effect, PCB traces with pulses and a staircase of rising supply rails as progress.",
+   "accent": "#ffb000",
+   "options": {
+    "data-pmic-bg": "colour the wipes fill the screen with (default #0b1f17)"
+   },
+   "preview": {
+    "ripple": "<div class=\"card\" data-fx=\"ripple\"><p class=\"big\">1000</p></div>"
+   },
+   "provides": {
+    "transitions": [
+     "pwm-wipe",
+     "rail-sweep"
+    ],
+    "effects": [
+     "ripple"
+    ],
+    "ambients": [
+     "rails"
+    ],
+    "dots": [
+     "rails-dots"
+    ]
+   }
+  },
+  {
    "name": "train",
    "title": "Train",
    "description": "A toy steam loco pulls slides away as wagons, steam clouds, a tunnel, level-crossing barriers, cards on wheels.",

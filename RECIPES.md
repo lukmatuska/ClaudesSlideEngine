@@ -6,7 +6,7 @@ trick for a kind of information, an interaction): one row each, with the deck an
 row when you find a better way. Rows are short; the deck itself is the full example to copy from.
 
 Slide links point at the deck source; open the deck and press the slide number (or add `#n` to its URL).
-Decks: [showcase](demo/showcase/deck.html) · [PixelPine](demo/PixelPine-demo/deck.html) · [Nudgy](demo/Nudgy-demo/deck.html) (slide ids in the Czech decks).
+Decks: [showcase](demo/showcase/deck.html) · [PixelPine](demo/PixelPine-demo/deck.html) · [Nudgy](demo/Nudgy-demo/deck.html) (slide ids in the Czech decks) · PMIC talk (`presentation/deck.html` in the author's project, English; not yet in the repo).
 
 ## Opening, structure, closing
 
@@ -59,3 +59,17 @@ Decks: [showcase](demo/showcase/deck.html) · [PixelPine](demo/PixelPine-demo/de
 | Keyboard keys / controls | Table with `<kbd>` keys in the left column | showcase 10 |
 | A set of names or options | Grid of small cards (`display:grid; grid-template-columns:repeat(4,1fr)`) | showcase 8 |
 | Showing several effects at once | Row of coloured tiles, each tile with its own `data-fx` and its name in it | showcase 6 |
+
+## Diagrams without photos (PMIC talk, all inline SVG)
+
+| need | solution | where |
+|---|---|---|
+| One source feeding many outputs | Battery box, one accent-filled chip box, lines fanning out to 5 labelled outputs; `data-fx="scan"` on the `<svg>` and the text column beside it | PMIC `slide 2` |
+| Circuit schematic with no source image | Hand-drawn SVG (switch, inductor as arcs, diode, capacitor, ground rail), 32 px labels, `data-fx="scan"`; two KPI cards beside it | PMIC `slide 5` |
+| A formula with its consequence | Formula as the 64 px heading, a plain SVG curve (axes, dashed guides, two dots for low/high) and an `ol` of 3 steps at 32 px | PMIC `slide 6` |
+| A chain of stages (power path) | Three stacked rounded boxes with arrows in SVG on an accent-coloured slide; one KPI card with `data-fx="ripple"` for the headline number | PMIC `slide 8` |
+| Numbers with a source | Cards `data-fx="ripple"` (settles with ringing, counts up) and a 32 px "Source: …" label under them | PMIC `slide 4` |
+| Grid of equal-weight cards (6 items) | `.grid3` with `flex:1; grid-auto-rows:1fr` so the cards fill the slide height instead of floating at the top | PMIC `slides 3, 7` |
+| Power tree of a real board | Left: 3 SVG boxes in a row (input → protection → PMIC in accent colour) with a 32 px source label; right: a two-column table (rail name, voltage in accent colour, counts up); say in the label that it is community reverse engineering, not an official schematic | PMIC `slide 9` |
+| Block diagram with inputs left and outputs right | One tall accent box (title rotated 90°) with three white boxes on each side joined by short lines; keep labels ≤ 2 short lines at 32 px so they fit | PMIC `slide 8` |
+| Photo + close-up of a board | Two photos side by side in white rounded frames (810 × 544 px); on the overview one photo gets an accent-colour ellipse (inline `<svg>` over the `<img>`, same viewBox as the picture) around the part, the other is `data-fx="scan"`; one 32 px caption under each | PMIC `slide 9` |
